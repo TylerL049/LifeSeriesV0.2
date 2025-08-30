@@ -24,6 +24,9 @@ public class HotPotato extends Wildcard {
     private int ticksUntilExplode;
     private boolean active;
 
+    private static final int DEFAULT_FUSE_TICKS = 600; // 30 seconds
+    private static final int DEFAULT_DURATION_TICKS = 600; // 30 seconds until explosion
+
     public HotPotato() {
         this.active = false;
     }
@@ -33,12 +36,13 @@ public class HotPotato extends Wildcard {
         return Wildcards.HOT_POTATO;
     }
 
-    /** Activates the Hot Potato silently, waits 30 seconds before assigning a holder */
-    public void activate(int fuseTicks) {
+    /** Called by WildcardManager */
+    @Override
+    public void activate() {
         this.active = true;
 
-        // Schedule assignment after 30 seconds (600 ticks)
-        TaskScheduler.scheduleTask(600, () -> {
+        // Schedule holder assignment after 30 seconds
+        TaskScheduler.scheduleTask(DEFAULT_FUSE_TICKS, () -> {
             List<ServerPlayerEntity> candidates = livesManager.getAlivePlayers();
             candidates.removeIf(WatcherManager::isWatcher);
 
@@ -48,7 +52,7 @@ public class HotPotato extends Wildcard {
             }
 
             ServerPlayerEntity chosen = candidates.get(new Random().nextInt(candidates.size()));
-            start(chosen, fuseTicks);
+            start(chosen, DEFAULT_DURATION_TICKS);
         });
     }
 
@@ -65,6 +69,7 @@ public class HotPotato extends Wildcard {
 
         givePotato(potatoHolder);
 
+        // Notify only the holder
         PlayerUtils.sendTitle(
                 potatoHolder,
                 Text.literal("You have the Hot Potato!").formatted(Formatting.RED),
@@ -72,11 +77,12 @@ public class HotPotato extends Wildcard {
         );
     }
 
-    /** Tick logic, should be called every server tick */
+    /** Called every server tick by WildcardManager.tick() */
+    @Override
     public void tick() {
         if (!active || potatoHolder == null) return;
 
-        // Reinsert the potato if the player dropped it accidentally
+        // Re-insert potato if player dropped it
         if (!playerHasPotato(potatoHolder)) {
             givePotato(potatoHolder);
         }
@@ -130,7 +136,7 @@ public class HotPotato extends Wildcard {
         reset();
     }
 
-    /** Safely gives a potato item to a player, drops it if inventory full */
+    /** Gives a potato item to the player, drops if inventory full */
     private void givePotato(ServerPlayerEntity player) {
         if (player == null) return;
         ItemStack potato = new ItemStack(Items.POTATO);
@@ -140,7 +146,7 @@ public class HotPotato extends Wildcard {
         }
     }
 
-    /** Removes all potato items from a player (fixed for 1.21.6) */
+    /** Removes all potatoes from a player */
     private void removePotato(ServerPlayerEntity player) {
         if (player == null) return;
 
@@ -148,7 +154,7 @@ public class HotPotato extends Wildcard {
             ItemStack stack = player.getInventory().getStack(i);
             if (stack.getItem() == Items.POTATO) {
                 player.getInventory().removeStack(i);
-                i--; // step back because inventory shrinks
+                i--; // adjust index after removal
             }
         }
     }
