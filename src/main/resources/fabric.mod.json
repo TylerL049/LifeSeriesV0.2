@@ -1,0 +1,45 @@
+{
+	"schemaVersion": 1,
+	"id": "lifeseries",
+	"version": "${version}+${minecraftVersion}",
+	"name": "Life Series",
+	"description": "A one-to-one recreation of Grian's Life Series in fabric.",
+	"authors": [
+		"Mat0u5"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/Mat0u5/LifeSeries"
+	},
+	"license": "MIT",
+	"icon": "assets/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"net.mat0u5.lifeseries.Main"
+		],
+		"client": [
+			"net.mat0u5.lifeseries.MainClient"
+		],
+		"voicechat": [
+			"net.mat0u5.lifeseries.voicechat.VoicechatMain"
+		]
+	},
+	"mixins": [
+		"lifeseries.mixins.json",
+		{
+			"config": "lifeseries.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.14.21",
+		"minecraft": "${targetVersion}",
+		"java": ">=21",
+		"fabric-api": "*"
+	},
+	"suggests": {
+		"bil": ">=1.1.10",
+		"polymer-bundled": ">=0.10.0"
+	}
+}

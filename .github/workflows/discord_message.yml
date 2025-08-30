@@ -1,0 +1,41 @@
+name: discord_message
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_message:
+        description: 'Commit Message'
+        required: true
+        default: 'Commit message'
+        type: string
+      commit_link:
+        description: 'Commit Link'
+        required: true
+        default: 'https://github.com/Mat0u5/LifeSeries/commit/'
+        type: string
+      ping:
+        description: 'Ping'
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  message:
+    runs-on: ubuntu-22.04
+    steps:
+
+      - name: Get Title
+        id: discord_title
+        run: |
+          if [ "${{ github.event.inputs.ping }}" = "false" ]; then
+            echo "MESSAGE_TITLE=*Ping Skipped.*" >> $GITHUB_ENV
+          else
+            echo "MESSAGE_TITLE=<@&1346436504427171961>" >> $GITHUB_ENV
+          fi
+
+      - name: Discord Message
+        uses: satak/webrequest-action@master
+        with:
+          url: ${{ secrets.DISCORD_WEBHOOK }}
+          method: POST
+          payload: '{ "content": "${{ env.MESSAGE_TITLE }}", "embeds": [{ "title": "[${{ github.repository }}:main - new commit", "author": {"name": "Mat0u5","url": "https://github.com/Mat0u5","icon_url": "https://github.com/Mat0u5.png"},"description": "`Commit Message:` ```\n${{ github.event.inputs.commit_message }}```", "url": "${{ github.event.inputs.commit_link }}", "color": 5315202 }] }'

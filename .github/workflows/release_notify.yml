@@ -1,0 +1,88 @@
+name: release_notify
+on:
+  release:
+    types: [published]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sleep to wait for any files to upload
+        run: sleep 30
+
+      - name: Fetch current release data
+        id: fetch_release
+        run: |
+          # Fetch the current release data from GitHub API
+          RELEASE_DATA=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ github.event.release.tag_name }}")
+          
+          echo "release_data<<EOF" >> $GITHUB_OUTPUT
+          echo "$RELEASE_DATA" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Determine Release Type
+        id: release_type
+        run: |
+          if [ "${{ github.event.release.prerelease }}" = "true" ]; then
+            echo "type=Pre-Release" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event.release.latest }}" = "true" ]; then
+            echo "type=Latest Release" >> $GITHUB_OUTPUT
+          else
+            echo "type=Release" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Format Assets
+        id: format_assets
+        run: |
+          echo "Processing release assets..."
+          
+          # Extract assets from the fetched release data
+          ASSETS_JSON=$(echo '${{ steps.fetch_release.outputs.release_data }}' | jq '.assets')
+          echo "Assets JSON: $ASSETS_JSON"
+          
+          # Process assets with jq to create formatted links with smart size formatting
+          FORMATTED_ASSETS=$(echo "$ASSETS_JSON" | jq -r '
+            def format_size(bytes):
+              if bytes < 1024 then
+                (bytes | tostring) + "B"
+              elif bytes < (1024 * 1024) then
+                ((bytes / 1024 * 100 | floor) / 100 | tostring) + "KB"
+              elif bytes < (1024 * 1024 * 1024) then
+                ((bytes / 1024 / 1024 * 100 | floor) / 100 | tostring) + "MB"
+              else
+                ((bytes / 1024 / 1024 / 1024 * 100 | floor) / 100 | tostring) + "GB"
+              end;
+          
+            if length == 0 then
+              "\\n*No assets available*"
+            else
+              "\\n" + (map("• [" + .name + "](" + .browser_download_url + ")   (" + format_size(.size) + ")") | join("\\n"))
+            end
+          ')
+          
+          echo "formatted_assets=$FORMATTED_ASSETS" >> $GITHUB_OUTPUT
+          echo "Assets formatted: $FORMATTED_ASSETS"
+
+      - name: Escape release body
+        id: escape_body
+        run: |
+          # Remove all backticks from the release body and then escape
+          cleaned_body=$(echo '${{ github.event.release.body }}' | tr -d '`')
+          escaped_body=$(echo "$cleaned_body" | jq -Rs .)
+          echo "escaped_body=${escaped_body:1:-1}" >> $GITHUB_OUTPUT
+
+      - name: Discord Message
+        uses: satak/webrequest-action@master
+        with:
+          url: ${{ secrets.DISCORD_WEBHOOK }}
+          method: POST
+          payload: |
+            {
+              "content": "### [GitHub ${{ steps.release_type.outputs.type }} `${{ github.event.release.name }}` is out!](${{ github.event.release.html_url }})",
+              "embeds": [{
+                "description": "Tag: `${{ github.event.release.tag_name }}`\n\nDescription:\n```\n${{ steps.escape_body.outputs.escaped_body }}\n```\nAssets:${{ steps.format_assets.outputs.formatted_assets }}",
+                "color": 5315202
+              }]
+            }

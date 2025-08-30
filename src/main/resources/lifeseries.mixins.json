@@ -1,0 +1,41 @@
+{
+  "required": true,
+  "package": "net.mat0u5.lifeseries.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "AdvancedExplosionBehaviorMixin",
+    "AnvilScreenHandlerMixin",
+    "CraftingScreenHandlerMixin",
+    "EnchantmentHelperMixin",
+    "EnderPearlEntityMixin",
+    "EntityMixin",
+    "ForgingScreenHandlerAccessor",
+    "HungerManagerMixin",
+    "ItemEntityMixin",
+    "ItemMixin",
+    "ItemStackMixin",
+    "LivingEntityMixin",
+    "MobEntityMixin",
+    "PlayerEntityMixin",
+    "PlayerInventoryMixin",
+    "PlayerManagerMixin",
+    "RecipeManagerMixin",
+    "SavePropertiesMixin",
+    "ServerCommandSourceMixin",
+    "ServerCommonNetworkHandlerMixin",
+    "ServerPlayerEntityMixin",
+    "ServerPlayerInteractionManagerMixin",
+    "ServerPlayNetworkHandlerMixin",
+    "ServerWaypointMixin",
+    "SleepManagerMixin",
+    "SpawnEggItemMixin",
+    "SpawnGroupMixin",
+    "SpawnHelperMixin",
+    "StatusEffectMixin",
+    "WanderingTraderManagerMixin",
+    "WindChargeItemMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
