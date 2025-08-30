@@ -86,6 +86,7 @@ public class WildcardManager {
         if (index == 4) activeWildcards.put(Wildcards.MOB_SWAP, new MobSwap());
         if (index == 5) activeWildcards.put(Wildcards.TRIVIA, new TriviaWildcard());
         if (index == 6) activeWildcards.put(Wildcards.SUPERPOWERS, new SuperpowersWildcard());
+        if (index == 7) activeWildcards.put(Wildcards.GRAVITY_MANIPULATION, new GravityManipulation());
     }
 
     public static void onPlayerJoin(ServerPlayerEntity player) {
