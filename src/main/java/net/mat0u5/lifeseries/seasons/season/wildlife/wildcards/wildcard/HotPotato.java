@@ -54,22 +54,22 @@ public class HotPotato extends Wildcard {
 
         if (potatoHolder != null) {
             if (!potatoHolder.getInventory().contains(new ItemStack(HOT_POTATO_ITEM))) {
-                lastHolder.kill(PlayerUtils.getServerWorld(lastHolder));
+                if (lastHolder != null && lastHolder.isAlive()) {
+                    lastHolder.kill(PlayerUtils.getServerWorld(lastHolder));
+                }
                 deactivate();
             }
         }
     }
 
-    @Override
-    public void onPlayerPickupItem(ServerPlayerEntity player, ItemStack stack) {
+    public void playerPickedUp(ServerPlayerEntity player, ItemStack stack) {
         if (!stack.isOf(HOT_POTATO_ITEM)) return;
         potatoHolder = player;
         lastHolder = player;
         PlayerUtils.displayMessageToPlayer(player, Text.literal("You have the Hot Potato - Give it to someone else, or else!"), 100);
     }
 
-    @Override
-    public void onPlayerDropItem(ServerPlayerEntity player, ItemStack stack) {
+    public void playerDropped(ServerPlayerEntity player, ItemStack stack) {
         if (!stack.isOf(HOT_POTATO_ITEM)) return;
         if (lastHolder != null && lastHolder.isAlive()) {
             lastHolder.kill(PlayerUtils.getServerWorld(lastHolder));
