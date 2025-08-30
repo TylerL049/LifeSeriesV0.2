@@ -1,7 +1,6 @@
 package net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.wildcard;
 
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcard;
-import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.WildcardManager;
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcards;
 import net.mat0u5.lifeseries.utils.player.PlayerUtils;
 import net.minecraft.entity.effect.StatusEffectInstance;
@@ -49,7 +48,7 @@ public class GravityManipulation extends Wildcard {
     }
 
     @Override
-    public void stop() {
+    public void deactivate() {
         for (ServerPlayerEntity player : PlayerUtils.getAllPlayers()) {
             player.removeStatusEffect(StatusEffects.JUMP_BOOST);
             player.removeStatusEffect(StatusEffects.LEVITATION);
