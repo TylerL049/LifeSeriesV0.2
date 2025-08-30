@@ -21,14 +21,16 @@ public class HotPotato extends Wildcard {
 
     private ServerPlayerEntity potatoHolder;
     private ServerPlayerEntity lastHolder;
-    private int ticksUntilExplode;
+    private int fuseTicks;
     private boolean active;
+    private boolean potatoAssigned;
 
-    private static final int DELAY_TICKS = 600;       // 30 seconds mystery before assigning potato
-    private static final int DURATION_TICKS = 600;    // 30 seconds countdown until explosion
+    private static final int DELAY_TICKS = 600;       // 30 seconds before assigning potato
+    private static final int FUSE_DURATION = 600;     // 30 seconds countdown after assignment
 
     public HotPotato() {
         this.active = false;
+        this.potatoAssigned = false;
     }
 
     @Override
@@ -40,51 +42,52 @@ public class HotPotato extends Wildcard {
     @Override
     public void activate() {
         this.active = true;
-        this.ticksUntilExplode = DELAY_TICKS + DURATION_TICKS; // full countdown including mystery delay
+        this.potatoAssigned = false;
 
-        // Schedule giving the potato after the mystery delay
-        TaskScheduler.scheduleTask(DELAY_TICKS, () -> {
-            List<ServerPlayerEntity> candidates = livesManager.getAlivePlayers();
-            candidates.removeIf(WatcherManager::isWatcher);
-
-            if (candidates.isEmpty()) {
-                reset();
-                return;
-            }
-
-            ServerPlayerEntity chosen = candidates.get(new Random().nextInt(candidates.size()));
-            this.potatoHolder = chosen;
-            givePotato(chosen);
-
-            // Notify only the holder
-            PlayerUtils.sendTitle(
-                    chosen,
-                    Text.literal("You have the Hot Potato!").formatted(Formatting.RED),
-                    20, 40, 20
-            );
-        });
+        // Mystery delay before potato is given
+        TaskScheduler.scheduleTask(DELAY_TICKS, this::assignPotatoToRandomPlayer);
     }
 
-    /** Called every server tick by WildcardManager.tick() */
+    private void assignPotatoToRandomPlayer() {
+        List<ServerPlayerEntity> candidates = livesManager.getAlivePlayers();
+        candidates.removeIf(WatcherManager::isWatcher);
+
+        if (candidates.isEmpty()) {
+            reset();
+            return;
+        }
+
+        potatoHolder = candidates.get(new Random().nextInt(candidates.size()));
+        givePotato(potatoHolder);
+        potatoAssigned = true;
+        fuseTicks = FUSE_DURATION;
+
+        PlayerUtils.sendTitle(
+                potatoHolder,
+                Text.literal("You have the Hot Potato!").formatted(Formatting.RED),
+                20, 40, 20
+        );
+    }
+
     @Override
     public void tick() {
         if (!active) return;
 
-        ticksUntilExplode--;
-        if (ticksUntilExplode <= 0) {
-            explode();
-            return;
-        }
+        if (potatoAssigned) {
+            fuseTicks--;
+            if (fuseTicks <= 0) {
+                explode();
+            }
 
-        // Only track potato if it has already been given
-        if (potatoHolder != null && !playerHasPotato(potatoHolder)) {
-            givePotato(potatoHolder);
+            // Ensure player still has potato
+            if (potatoHolder != null && !playerHasPotato(potatoHolder)) {
+                givePotato(potatoHolder);
+            }
         }
     }
 
-    /** Passes the potato to another player */
     public void passTo(ServerPlayerEntity nextPlayer) {
-        if (!active || nextPlayer == null || nextPlayer == potatoHolder) return;
+        if (!active || !potatoAssigned || nextPlayer == null || nextPlayer == potatoHolder) return;
 
         lastHolder = potatoHolder;
         potatoHolder = nextPlayer;
@@ -99,13 +102,20 @@ public class HotPotato extends Wildcard {
         );
     }
 
-    /** Handles explosion of the potato */
     private void explode() {
         if (potatoHolder != null) {
             removePotato(potatoHolder);
 
             int currentLives = livesManager.getPlayerLives(potatoHolder);
             livesManager.setPlayerLives(potatoHolder, currentLives - 1);
+
+            // Console logging
+            System.out.println("[HotPotato] Exploded! Current holder: " + potatoHolder.getEntityName());
+            if (lastHolder != null) {
+                System.out.println("[HotPotato] Last holder: " + lastHolder.getEntityName());
+            } else {
+                System.out.println("[HotPotato] No previous holder.");
+            }
 
             PlayerUtils.sendTitle(
                     potatoHolder,
@@ -125,45 +135,39 @@ public class HotPotato extends Wildcard {
         reset();
     }
 
-    /** Gives a potato item to the player, drops if inventory full */
     private void givePotato(ServerPlayerEntity player) {
         if (player == null) return;
-
         ItemStack potato = new ItemStack(Items.POTATO);
         if (!player.getInventory().insertStack(potato)) {
             player.dropItem(potato, false);
         }
     }
 
-    /** Removes all potatoes from a player */
     private void removePotato(ServerPlayerEntity player) {
         if (player == null) return;
-
         for (int i = 0; i < player.getInventory().size(); i++) {
             ItemStack stack = player.getInventory().getStack(i);
             if (stack.getItem() == Items.POTATO) {
                 player.getInventory().removeStack(i);
-                i--; // adjust index after removal
+                i--;
             }
         }
     }
 
-    /** Checks if player currently has a potato */
     private boolean playerHasPotato(ServerPlayerEntity player) {
         if (player == null) return false;
-
         for (int i = 0; i < player.getInventory().size(); i++) {
             if (player.getInventory().getStack(i).getItem() == Items.POTATO) return true;
         }
         return false;
     }
 
-    /** Resets the wildcard state */
     private void reset() {
         potatoHolder = null;
         lastHolder = null;
-        ticksUntilExplode = 0;
+        fuseTicks = 0;
         active = false;
+        potatoAssigned = false;
     }
 
     public boolean isActive() {
