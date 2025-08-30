@@ -110,9 +110,9 @@ public class HotPotato extends Wildcard {
             livesManager.setPlayerLives(potatoHolder, currentLives - 1);
 
             // Console logging
-            System.out.println("[HotPotato] Exploded! Current holder: " + potatoHolder.getEntityName());
+            System.out.println("[HotPotato] Exploded! Current holder: " + potatoHolder.getName().getString());
             if (lastHolder != null) {
-                System.out.println("[HotPotato] Last holder: " + lastHolder.getEntityName());
+                System.out.println("[HotPotato] Last holder: " + lastHolder.getName().getString());
             } else {
                 System.out.println("[HotPotato] No previous holder.");
             }
