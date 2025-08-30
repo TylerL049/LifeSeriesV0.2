@@ -82,4 +82,9 @@ public class HotPotato extends Wildcard {
     public ServerPlayerEntity getLastHolder() {
         return lastHolder;
     }
+
+    @Override
+    public Wildcards getType() {
+        return Wildcards.HOT_POTATO;
+}
 }
