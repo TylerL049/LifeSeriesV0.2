@@ -33,7 +33,7 @@ public class HotPotato extends Wildcard {
         return Wildcards.HOT_POTATO;
     }
 
-    /** Activates the Hot Potato wildcard silently, waits 30 seconds before assigning a holder */
+    /** Activates the Hot Potato silently, waits 30 seconds before assigning a holder */
     public void activate(int fuseTicks) {
         this.active = true;
 
@@ -77,7 +77,7 @@ public class HotPotato extends Wildcard {
         if (!active || potatoHolder == null) return;
 
         // Reinsert the potato if the player dropped it accidentally
-        if (!potatoHolder.getInventory().contains(new ItemStack(Items.POTATO))) {
+        if (!playerHasPotato(potatoHolder)) {
             givePotato(potatoHolder);
         }
 
@@ -140,10 +140,27 @@ public class HotPotato extends Wildcard {
         }
     }
 
-    /** Removes all potato items from a player */
+    /** Removes all potato items from a player (fixed for 1.21.6) */
     private void removePotato(ServerPlayerEntity player) {
         if (player == null) return;
-        player.getInventory().removeStack(Items.POTATO);
+
+        for (int i = 0; i < player.getInventory().size(); i++) {
+            ItemStack stack = player.getInventory().getStack(i);
+            if (stack.getItem() == Items.POTATO) {
+                player.getInventory().removeStack(i);
+                i--; // step back because inventory shrinks
+            }
+        }
+    }
+
+    /** Checks if player currently has a potato */
+    private boolean playerHasPotato(ServerPlayerEntity player) {
+        if (player == null) return false;
+
+        for (int i = 0; i < player.getInventory().size(); i++) {
+            if (player.getInventory().getStack(i).getItem() == Items.POTATO) return true;
+        }
+        return false;
     }
 
     /** Resets the wildcard state */
