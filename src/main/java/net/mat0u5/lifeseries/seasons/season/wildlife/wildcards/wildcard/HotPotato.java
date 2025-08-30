@@ -3,20 +3,20 @@ package net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.wildcard;
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcard;
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcards;
 import net.mat0u5.lifeseries.utils.player.PlayerUtils;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 
+import java.util.List;
 import java.util.Random;
-import java.util.UUID;
+import java.util.stream.Collectors;
 
 public class HotPotato extends Wildcard {
 
     private static final int TICKS_PER_SECOND = 20;
-    private static final int DURATION_TICKS = 60 * TICKS_PER_SECOND * 60;
-    private final Item HOT_POTATO_ITEM = Items.POTATO;
+    private static final int DURATION_TICKS = 60 * 60 * TICKS_PER_SECOND;
+    private final ItemStack HOT_POTATO_ITEM = new ItemStack(Items.POTATO);
     private final Random random = new Random();
     private ServerPlayerEntity potatoHolder = null;
     private ServerPlayerEntity lastHolder = null;
@@ -28,12 +28,24 @@ public class HotPotato extends Wildcard {
         return Wildcards.HOT_POTATO;
     }
 
+    private List<ServerPlayerEntity> getAlivePlayers() {
+        return PlayerUtils.getAllPlayers().stream()
+                .filter(PlayerUtils::isAlive)
+                .collect(Collectors.toList());
+    }
+
+    private ServerPlayerEntity getRandomAlivePlayer() {
+        List<ServerPlayerEntity> alive = getAlivePlayers();
+        if (alive.isEmpty()) return null;
+        return alive.get(random.nextInt(alive.size()));
+    }
+
     @Override
     public void activate() {
         active = true;
-        potatoHolder = PlayerUtils.getRandomAlivePlayer();
+        potatoHolder = getRandomAlivePlayer();
         if (potatoHolder != null) {
-            potatoHolder.getInventory().insertStack(new ItemStack(HOT_POTATO_ITEM));
+            potatoHolder.getInventory().insertStack(HOT_POTATO_ITEM.copy());
             potatoHolder.sendMessage(
                     net.minecraft.text.Text.literal("You have the Hot Potato - Give it to someone else, or else"),
                     false
@@ -54,16 +66,21 @@ public class HotPotato extends Wildcard {
             }
             deactivate();
         } else {
-            for (ServerPlayerEntity player : PlayerUtils.getAllAlivePlayers()) {
-                if (player.getInventory().contains(new ItemStack(HOT_POTATO_ITEM))) {
-                    if (player != potatoHolder) {
-                        lastHolder = potatoHolder;
-                        potatoHolder = player;
-                        potatoHolder.sendMessage(
-                                net.minecraft.text.Text.literal("You have the Hot Potato - Give it to someone else, or else"),
-                                false
-                        );
+            for (ServerPlayerEntity player : getAlivePlayers()) {
+                boolean hasPotato = false;
+                for (ItemStack stack : player.getInventory().main) {
+                    if (stack.isOf(Items.POTATO)) {
+                        hasPotato = true;
+                        break;
                     }
+                }
+                if (hasPotato && player != potatoHolder) {
+                    lastHolder = potatoHolder;
+                    potatoHolder = player;
+                    potatoHolder.sendMessage(
+                            net.minecraft.text.Text.literal("You have the Hot Potato - Give it to someone else, or else"),
+                            false
+                    );
                 }
             }
         }
@@ -72,7 +89,7 @@ public class HotPotato extends Wildcard {
     @Override
     public void deactivate() {
         for (ServerPlayerEntity player : PlayerUtils.getAllPlayers()) {
-            player.getInventory().remove(stack -> stack.isOf(HOT_POTATO_ITEM), Integer.MAX_VALUE, player.getInventory());
+            player.getInventory().remove(stack -> stack.isOf(Items.POTATO), Integer.MAX_VALUE, player.getInventory());
         }
         potatoHolder = null;
         lastHolder = null;
