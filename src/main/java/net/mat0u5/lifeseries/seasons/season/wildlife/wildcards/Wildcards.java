@@ -18,6 +18,7 @@ public enum Wildcards {
     MOB_SWAP,
     SUPERPOWERS,
     GRAVITY_MANIPULATION,
+    HOT_POTATO,
     CALLBACK;
 
 
@@ -30,6 +31,7 @@ public enum Wildcards {
         if (this == MOB_SWAP) return new MobSwap();
         if (this == SUPERPOWERS) return new SuperpowersWildcard();
         if (this == GRAVITY_MANIPULATION) return new GravityManipulation();
+        if (this == HOT_POTATO) return new HotPotato();
         if (this == CALLBACK) return new Callback();
         return null;
     }

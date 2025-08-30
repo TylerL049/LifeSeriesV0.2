@@ -101,7 +101,7 @@ public class ChooseWildcardScreen extends DefaultScreen {
                         .build()
         );
         this.addDrawableChild(
-            ButtonWidget.builder(Text.literal("Gravity Manipulation"), btn -> {
+                ButtonWidget.builder(Text.literal("Gravity Manipulation"), btn -> {
                             if (this.client != null) this.client.setScreen(null);
                             NetworkHandlerClient.sendStringPacket(PacketNames.SELECTED_WILDCARD,"gravity_manipulation");
                         })
@@ -109,6 +109,16 @@ public class ChooseWildcardScreen extends DefaultScreen {
                         .size(80, 20)
                         .build()
         );
+        this.addDrawableChild(
+                ButtonWidget.builder(Text.literal("Hot Potato"), btn -> {
+                            if (this.client != null) this.client.setScreen(null);
+                            NetworkHandlerClient.sendStringPacket(PacketNames.SELECTED_WILDCARD, "hot_potato");
+                        })
+                        .position(twoThirdX - 40, startY + 195)
+                        .size(80, 20)
+                        .build()
+        );
+    }
     }
 
     @Override
