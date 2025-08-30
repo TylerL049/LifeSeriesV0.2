@@ -119,7 +119,6 @@ public class ChooseWildcardScreen extends DefaultScreen {
                         .build()
         );
     }
-    }
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY) {
