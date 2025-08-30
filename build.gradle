@@ -39,7 +39,7 @@ fabricApi {
 }
 
 dependencies {
-    minecraft("com.mojang:minecraft:${stonecutter.current.project}")
+    minecraft("com.mojang:minecraft:1.21.7")
 
     // Use local Yarn mappings jar
     mappings files('libs/yarn-1.21.7+build.local-v2.jar')
