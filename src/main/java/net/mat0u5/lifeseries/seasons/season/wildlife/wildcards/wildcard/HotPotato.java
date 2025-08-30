@@ -8,8 +8,6 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
-import java.util.UUID;
-
 import static net.mat0u5.lifeseries.Main.livesManager;
 
 public class HotPotato extends Wildcard {
@@ -23,14 +21,25 @@ public class HotPotato extends Wildcard {
         this.active = false;
     }
 
+    /**
+     * Starts the Hot Potato for a given player.
+     * @param starter the player who initially holds the potato
+     * @param fuseTicks how many ticks until the potato explodes
+     */
     public void start(ServerPlayerEntity starter, int fuseTicks) {
+        if (starter == null) return;
+
         this.potatoHolder = starter;
         this.lastHolder = null;
         this.ticksUntilExplode = fuseTicks;
         this.active = true;
-        broadcastPotatoHolder();
+
+        notifyHolder();
     }
 
+    /**
+     * Call this every tick to update the fuse.
+     */
     public void tick() {
         if (!active) return;
 
@@ -40,30 +49,49 @@ public class HotPotato extends Wildcard {
         }
     }
 
+    /**
+     * Pass the potato to another player.
+     * @param nextPlayer the player who receives the potato
+     */
     public void passTo(ServerPlayerEntity nextPlayer) {
-        if (!active) return;
-        if (nextPlayer == null) return;
+        if (!active || nextPlayer == null) return;
+
         lastHolder = potatoHolder;
         potatoHolder = nextPlayer;
-        broadcastPotatoHolder();
+
+        notifyHolder();
     }
 
+    /**
+     * Explode the potato, reducing the holder's lives by 1.
+     */
     private void explode() {
         if (potatoHolder != null) {
             int currentLives = livesManager.getPlayerLives(potatoHolder);
-            livesManager.setPlayerLives(potatoHolder, currentLives - 1);
-            PlayerUtils.sendTitle(potatoHolder, Text.literal("The Hot Potato exploded!").formatted(Formatting.RED), 20, 40, 20);
+            livesManager.setPlayerLives(potatoHolder, Math.max(currentLives - 1, 0));
+
+            PlayerUtils.sendTitle(potatoHolder,
+                    Text.literal("The Hot Potato exploded!").formatted(Formatting.RED),
+                    20, 40, 20);
         }
-        if (lastHolder != null) {
-            PlayerUtils.sendTitle(lastHolder, Text.literal("You just passed the Hot Potato.").formatted(Formatting.GRAY), 20, 40, 20);
-        }
+
         reset();
     }
 
-    private void broadcastPotatoHolder() {
-        // Optional: implement broadcast logic if needed
+    /**
+     * Notify the current holder that they have the potato.
+     */
+    private void notifyHolder() {
+        if (potatoHolder != null) {
+            PlayerUtils.sendTitle(potatoHolder,
+                    Text.literal("You have the Hot Potato!").formatted(Formatting.GOLD),
+                    10, 40, 10);
+        }
     }
 
+    /**
+     * Reset the Hot Potato state.
+     */
     public void reset() {
         this.potatoHolder = null;
         this.lastHolder = null;
@@ -86,5 +114,5 @@ public class HotPotato extends Wildcard {
     @Override
     public Wildcards getType() {
         return Wildcards.HOT_POTATO;
-}
+    }
 }
