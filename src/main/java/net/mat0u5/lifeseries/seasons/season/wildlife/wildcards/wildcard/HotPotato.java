@@ -47,7 +47,7 @@ public class HotPotato extends Wildcard {
         tickCounter++;
         if (tickCounter >= DURATION_TICKS) {
             if (lastHolder != null && lastHolder.isAlive()) {
-                lastHolder.kill(PlayerUtils.getServerWorld(lastHolder));
+                lastHolder.kill();
             }
             deactivate();
         }
@@ -55,7 +55,7 @@ public class HotPotato extends Wildcard {
         if (potatoHolder != null) {
             if (!potatoHolder.getInventory().contains(new ItemStack(HOT_POTATO_ITEM))) {
                 if (lastHolder != null && lastHolder.isAlive()) {
-                    lastHolder.kill(PlayerUtils.getServerWorld(lastHolder));
+                    lastHolder.kill();
                 }
                 deactivate();
             }
@@ -72,7 +72,7 @@ public class HotPotato extends Wildcard {
     public void playerDropped(ServerPlayerEntity player, ItemStack stack) {
         if (!stack.isOf(HOT_POTATO_ITEM)) return;
         if (lastHolder != null && lastHolder.isAlive()) {
-            lastHolder.kill(PlayerUtils.getServerWorld(lastHolder));
+            lastHolder.kill();
         }
         potatoHolder = null;
     }
