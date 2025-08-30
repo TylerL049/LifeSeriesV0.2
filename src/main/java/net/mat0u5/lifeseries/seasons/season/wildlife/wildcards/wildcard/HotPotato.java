@@ -4,9 +4,13 @@ import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcard;
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcards;
 import net.mat0u5.lifeseries.utils.player.PlayerUtils;
 import net.mat0u5.lifeseries.seasons.other.LivesManager;
+import net.mat0u5.lifeseries.utils.other.TaskScheduler;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+
+import java.util.List;
+import java.util.Random;
 
 import static net.mat0u5.lifeseries.Main.livesManager;
 
@@ -21,25 +25,32 @@ public class HotPotato extends Wildcard {
         this.active = false;
     }
 
-    /**
-     * Starts the Hot Potato for a given player.
-     * @param starter the player who initially holds the potato
-     * @param fuseTicks how many ticks until the potato explodes
-     */
-    public void start(ServerPlayerEntity starter, int fuseTicks) {
-        if (starter == null) return;
+    @Override
+    public Wildcards getType() {
+        return Wildcards.HOT_POTATO;
+    }
 
+    public void activate(int fuseTicks) {
+        List<ServerPlayerEntity> alivePlayers = livesManager.getAlivePlayers();
+        if (alivePlayers.isEmpty()) return;
+
+        // Choose a random player
+        Random rand = new Random();
+        ServerPlayerEntity chosen = alivePlayers.get(rand.nextInt(alivePlayers.size()));
+
+        start(chosen, fuseTicks);
+    }
+
+    private void start(ServerPlayerEntity starter, int fuseTicks) {
         this.potatoHolder = starter;
         this.lastHolder = null;
         this.ticksUntilExplode = fuseTicks;
         this.active = true;
 
-        notifyHolder();
+        // Notify only the holder
+        PlayerUtils.sendTitle(potatoHolder, Text.literal("You have the Hot Potato!").formatted(Formatting.RED), 20, 40, 20);
     }
 
-    /**
-     * Call this every tick to update the fuse.
-     */
     public void tick() {
         if (!active) return;
 
@@ -49,50 +60,28 @@ public class HotPotato extends Wildcard {
         }
     }
 
-    /**
-     * Pass the potato to another player.
-     * @param nextPlayer the player who receives the potato
-     */
     public void passTo(ServerPlayerEntity nextPlayer) {
         if (!active || nextPlayer == null) return;
 
         lastHolder = potatoHolder;
         potatoHolder = nextPlayer;
 
-        notifyHolder();
+        PlayerUtils.sendTitle(potatoHolder, Text.literal("You have the Hot Potato!").formatted(Formatting.RED), 20, 40, 20);
     }
 
-    /**
-     * Explode the potato, reducing the holder's lives by 1.
-     */
     private void explode() {
         if (potatoHolder != null) {
             int currentLives = livesManager.getPlayerLives(potatoHolder);
-            livesManager.setPlayerLives(potatoHolder, Math.max(currentLives - 1, 0));
-
-            PlayerUtils.sendTitle(potatoHolder,
-                    Text.literal("The Hot Potato exploded!").formatted(Formatting.RED),
-                    20, 40, 20);
+            livesManager.setPlayerLives(potatoHolder, currentLives - 1);
+            PlayerUtils.sendTitle(potatoHolder, Text.literal("The Hot Potato exploded!").formatted(Formatting.RED), 20, 40, 20);
         }
-
+        if (lastHolder != null) {
+            PlayerUtils.sendTitle(lastHolder, Text.literal("You just passed the Hot Potato.").formatted(Formatting.GRAY), 20, 40, 20);
+        }
         reset();
     }
 
-    /**
-     * Notify the current holder that they have the potato.
-     */
-    private void notifyHolder() {
-        if (potatoHolder != null) {
-            PlayerUtils.sendTitle(potatoHolder,
-                    Text.literal("You have the Hot Potato!").formatted(Formatting.GOLD),
-                    10, 40, 10);
-        }
-    }
-
-    /**
-     * Reset the Hot Potato state.
-     */
-    public void reset() {
+    private void reset() {
         this.potatoHolder = null;
         this.lastHolder = null;
         this.ticksUntilExplode = 0;
@@ -109,10 +98,5 @@ public class HotPotato extends Wildcard {
 
     public ServerPlayerEntity getLastHolder() {
         return lastHolder;
-    }
-
-    @Override
-    public Wildcards getType() {
-        return Wildcards.HOT_POTATO;
     }
 }
