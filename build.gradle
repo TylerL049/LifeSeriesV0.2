@@ -36,7 +36,7 @@ fabricApi {
 }
 dependencies {
  minecraft("com.mojang:minecraft:${stonecutter.current.project}")
- mappings("net.fabricmc:yarn:${property("yarn_mappings")}")
+ mappings("net.fabricmc:yarn:${property("yarn_mappings")}:v2")
 
  modImplementation("net.fabricmc:fabric-loader:${property("loader_version")}")
  modImplementation("net.fabricmc.fabric-api:fabric-api:${property("fabric_version")}")
