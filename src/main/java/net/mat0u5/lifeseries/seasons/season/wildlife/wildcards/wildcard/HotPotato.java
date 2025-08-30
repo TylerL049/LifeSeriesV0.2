@@ -10,7 +10,7 @@ import java.util.UUID;
 
 import static net.mat0u5.lifeseries.Main.livesManager;
 
-public class HotPotato {
+public class HotPotato extends Wildcard {
 
     private ServerPlayerEntity potatoHolder;
     private ServerPlayerEntity lastHolder;
