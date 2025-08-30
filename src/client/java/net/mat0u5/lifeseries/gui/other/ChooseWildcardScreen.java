@@ -100,6 +100,15 @@ public class ChooseWildcardScreen extends DefaultScreen {
                         .size(80, 20)
                         .build()
         );
+        this.addDrawableChild(
+            ButtonWidget.builder(Text.literal("Gravity Manipulation"), btn -> {
+                            if (this.client != null) this.client.setScreen(null);
+                            NetworkHandlerClient.sendStringPacket(PacketNames.SELECTED_WILDCARD,"gravity_manipulation");
+                        })
+                        .position(twoThirdX - 40, startY  + 165) // adjust position as needed
+                        .size(80, 20)
+                        .build()
+        );
     }
 
     @Override
