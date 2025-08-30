@@ -2,20 +2,16 @@ package net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.wildcard;
 
 import net.mat0u5.lifeseries.utils.player.PlayerUtils;
 import net.mat0u5.lifeseries.seasons.other.LivesManager;
-import net.mat0u5.lifeseries.network.NetworkHandlerClient;
-import net.mat0u5.lifeseries.utils.enums.PacketNames;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 
-import static net.mat0u5.lifeseries.Main.*;
+import static net.mat0u5.lifeseries.Main.livesManager;
 
 public class HotPotato {
 
-    private static final String HOT_POTATO_ITEM = "hot_potato";
     private ServerPlayerEntity potatoHolder;
     private ServerPlayerEntity lastHolder;
     private int ticksUntilExplode;
@@ -52,18 +48,18 @@ public class HotPotato {
 
     private void explode() {
         if (potatoHolder != null) {
-            livesManager.setPlayerLives(potatoHolder, livesManager.getPlayerLives(potatoHolder) - 1);
-            PlayerUtils.sendTitle(potatoHolder, Text.of("§cThe Hot Potato exploded!"), 20, 40, 20);
+            int currentLives = livesManager.getPlayerLives(potatoHolder);
+            livesManager.setPlayerLives(potatoHolder, currentLives - 1);
+            PlayerUtils.sendTitle(potatoHolder, Text.literal("The Hot Potato exploded!").formatted(Formatting.RED), 20, 40, 20);
         }
         if (lastHolder != null) {
-            PlayerUtils.sendTitle(lastHolder, Text.of("§7You just passed the Hot Potato."), 20, 40, 20);
+            PlayerUtils.sendTitle(lastHolder, Text.literal("You just passed the Hot Potato.").formatted(Formatting.GRAY), 20, 40, 20);
         }
         reset();
     }
 
     private void broadcastPotatoHolder() {
-        if (potatoHolder == null) return;
-        NetworkHandlerClient.sendStringPacket(PacketNames.SELECTED_WILDCARD, "hot_potato:" + potatoHolder.getUuid());
+        // Optional: implement broadcast logic if needed
     }
 
     public void reset() {
