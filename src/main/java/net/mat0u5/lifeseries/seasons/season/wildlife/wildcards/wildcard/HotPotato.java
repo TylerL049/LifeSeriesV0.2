@@ -7,22 +7,21 @@ import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.server.world.ServerWorld;
 
 import java.util.Random;
+import java.util.UUID;
 
 public class HotPotato extends Wildcard {
 
     private static final int TICKS_PER_SECOND = 20;
-    private static final int DURATION_TICKS = 60 * 60 * TICKS_PER_SECOND;
-
+    private static final int DURATION_TICKS = 60 * TICKS_PER_SECOND * 60;
+    private final Item HOT_POTATO_ITEM = Items.POTATO;
+    private final Random random = new Random();
     private ServerPlayerEntity potatoHolder = null;
     private ServerPlayerEntity lastHolder = null;
     private int tickCounter = 0;
-    private final Random random = new Random();
-
-    private final Item HOT_POTATO_ITEM = Items.POTATO;
+    private boolean active = false;
 
     @Override
     public Wildcards getType() {
@@ -30,66 +29,54 @@ public class HotPotato extends Wildcard {
     }
 
     @Override
+    public void activate() {
+        active = true;
+        potatoHolder = PlayerUtils.getRandomAlivePlayer();
+        if (potatoHolder != null) {
+            potatoHolder.getInventory().insertStack(new ItemStack(HOT_POTATO_ITEM));
+            potatoHolder.sendMessage(
+                    net.minecraft.text.Text.literal("You have the Hot Potato - Give it to someone else, or else"),
+                    false
+            );
+            lastHolder = potatoHolder;
+        }
+    }
+
+    @Override
     public void tick() {
+        if (!active || potatoHolder == null) return;
         tickCounter++;
-
-        if (!active) return;
-
-        if (tickCounter == 1) {
-            assignRandomPlayer();
-        }
-
         if (tickCounter >= DURATION_TICKS) {
-            endHotPotato();
-        }
-
-        for (ServerPlayerEntity player : PlayerUtils.getAllFunctioningPlayers()) {
-            if (player.isSpectator()) continue;
-
-            if (player.getInventory().contains(new ItemStack(HOT_POTATO_ITEM))) {
-                if (potatoHolder == null || !potatoHolder.equals(player)) {
-                    lastHolder = potatoHolder;
-                    potatoHolder = player;
-                    player.sendMessage(Text.literal("You have the Hot Potato - Give it to another player before it explodes!").formatted(Formatting.RED), false);
-                }
-            } else {
-                if (player.equals(potatoHolder)) {
-                    lastHolder = potatoHolder;
-                    potatoHolder = null;
+            if (potatoHolder != null) {
+                potatoHolder.kill((ServerWorld) potatoHolder.getWorld());
+            } else if (lastHolder != null) {
+                lastHolder.kill((ServerWorld) lastHolder.getWorld());
+            }
+            deactivate();
+        } else {
+            for (ServerPlayerEntity player : PlayerUtils.getAllAlivePlayers()) {
+                if (player.getInventory().contains(new ItemStack(HOT_POTATO_ITEM))) {
+                    if (player != potatoHolder) {
+                        lastHolder = potatoHolder;
+                        potatoHolder = player;
+                        potatoHolder.sendMessage(
+                                net.minecraft.text.Text.literal("You have the Hot Potato - Give it to someone else, or else"),
+                                false
+                        );
+                    }
                 }
             }
         }
     }
 
-    private void assignRandomPlayer() {
-        var players = PlayerUtils.getAllFunctioningPlayers();
-        if (players.isEmpty()) return;
-        potatoHolder = players.get(random.nextInt(players.size()));
-        lastHolder = potatoHolder;
-        giveHotPotato(potatoHolder);
-    }
-
-    private void giveHotPotato(ServerPlayerEntity player) {
-        player.getInventory().insertStack(new ItemStack(HOT_POTATO_ITEM));
-        player.sendMessage(Text.literal("You have the Hot Potato - Give it to another player before it explodes!").formatted(Formatting.RED), false);
-    }
-
-    private void endHotPotato() {
-        if (potatoHolder != null) {
-            potatoHolder.kill();
-        } else if (lastHolder != null) {
-            lastHolder.kill();
-        }
-        deactivate();
-    }
-
     @Override
     public void deactivate() {
         for (ServerPlayerEntity player : PlayerUtils.getAllPlayers()) {
-            player.getInventory().remove(new ItemStack(HOT_POTATO_ITEM));
+            player.getInventory().remove(stack -> stack.isOf(HOT_POTATO_ITEM), Integer.MAX_VALUE, player.getInventory());
         }
-        tickCounter = 0;
         potatoHolder = null;
         lastHolder = null;
+        tickCounter = 0;
+        active = false;
     }
 }
