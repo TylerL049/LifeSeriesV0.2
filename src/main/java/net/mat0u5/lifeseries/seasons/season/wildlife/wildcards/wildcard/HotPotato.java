@@ -24,8 +24,8 @@ public class HotPotato extends Wildcard {
     private int ticksUntilExplode;
     private boolean active;
 
-    private static final int DEFAULT_FUSE_TICKS = 600; // 30 seconds
-    private static final int DEFAULT_DURATION_TICKS = 600; // 30 seconds until explosion
+    private static final int DELAY_TICKS = 600;       // 30 seconds mystery before assigning potato
+    private static final int DURATION_TICKS = 600;    // 30 seconds countdown until explosion
 
     public HotPotato() {
         this.active = false;
@@ -40,9 +40,10 @@ public class HotPotato extends Wildcard {
     @Override
     public void activate() {
         this.active = true;
+        this.ticksUntilExplode = DELAY_TICKS + DURATION_TICKS; // full countdown including mystery delay
 
-        // Schedule holder assignment after 30 seconds
-        TaskScheduler.scheduleTask(DEFAULT_FUSE_TICKS, () -> {
+        // Schedule giving the potato after the mystery delay
+        TaskScheduler.scheduleTask(DELAY_TICKS, () -> {
             List<ServerPlayerEntity> candidates = livesManager.getAlivePlayers();
             candidates.removeIf(WatcherManager::isWatcher);
 
@@ -52,44 +53,32 @@ public class HotPotato extends Wildcard {
             }
 
             ServerPlayerEntity chosen = candidates.get(new Random().nextInt(candidates.size()));
-            start(chosen, DEFAULT_DURATION_TICKS);
+            this.potatoHolder = chosen;
+            givePotato(chosen);
+
+            // Notify only the holder
+            PlayerUtils.sendTitle(
+                    chosen,
+                    Text.literal("You have the Hot Potato!").formatted(Formatting.RED),
+                    20, 40, 20
+            );
         });
-    }
-
-    /** Starts the Hot Potato for a specific player */
-    private void start(ServerPlayerEntity starter, int fuseTicks) {
-        if (starter == null) {
-            reset();
-            return;
-        }
-
-        this.potatoHolder = starter;
-        this.lastHolder = null;
-        this.ticksUntilExplode = fuseTicks;
-
-        givePotato(potatoHolder);
-
-        // Notify only the holder
-        PlayerUtils.sendTitle(
-                potatoHolder,
-                Text.literal("You have the Hot Potato!").formatted(Formatting.RED),
-                20, 40, 20
-        );
     }
 
     /** Called every server tick by WildcardManager.tick() */
     @Override
     public void tick() {
-        if (!active || potatoHolder == null) return;
-
-        // Re-insert potato if player dropped it
-        if (!playerHasPotato(potatoHolder)) {
-            givePotato(potatoHolder);
-        }
+        if (!active) return;
 
         ticksUntilExplode--;
         if (ticksUntilExplode <= 0) {
             explode();
+            return;
+        }
+
+        // Only track potato if it has already been given
+        if (potatoHolder != null && !playerHasPotato(potatoHolder)) {
+            givePotato(potatoHolder);
         }
     }
 
@@ -139,8 +128,8 @@ public class HotPotato extends Wildcard {
     /** Gives a potato item to the player, drops if inventory full */
     private void givePotato(ServerPlayerEntity player) {
         if (player == null) return;
-        ItemStack potato = new ItemStack(Items.POTATO);
 
+        ItemStack potato = new ItemStack(Items.POTATO);
         if (!player.getInventory().insertStack(potato)) {
             player.dropItem(potato, false);
         }
