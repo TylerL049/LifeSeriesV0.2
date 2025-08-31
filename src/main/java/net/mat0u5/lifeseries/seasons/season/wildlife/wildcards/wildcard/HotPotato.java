@@ -31,7 +31,7 @@ public class HotPotato extends Wildcard {
     private UUID potatoUuid;
 
     private static final int DELAY_TICKS = 600;        // 30s before assignment
-    private static final int FUSE_DURATION = 12000;    // 10 minutes after assignment
+    private static final int FUSE_DURATION = 13000;    // 10 minutes after assignment
     private static final String NBT_KEY = "HotPotatoUUID";
 
     public HotPotato() {
