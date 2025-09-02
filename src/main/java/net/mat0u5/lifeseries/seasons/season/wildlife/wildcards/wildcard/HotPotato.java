@@ -33,6 +33,7 @@ public class HotPotato extends Wildcard {
 
     private static final int DELAY_TICKS = 200;
     private static final int FUSE_DURATION = 12000;
+    private static final int CHECK_INTERVAL = 20; // 1 second
     private static final String NBT_KEY = "HotPotatoUUID";
 
     public HotPotato() {
@@ -50,7 +51,12 @@ public class HotPotato extends Wildcard {
         this.active = true;
         this.potatoAssigned = false;
         this.potatoUuid = UUID.randomUUID();
+
+        // Wait a few seconds, then assign potato
         TaskScheduler.scheduleTask(DELAY_TICKS, this::assignPotatoToRandomPlayer);
+
+        // Start scanning inventories
+        TaskScheduler.scheduleRepeatingTask(CHECK_INTERVAL, this::checkPotatoHolder);
     }
 
     private void assignPotatoToRandomPlayer() {
@@ -71,30 +77,48 @@ public class HotPotato extends Wildcard {
                 20, 40, 20
         );
         potatoHolder.sendMessage(
-        Text.literal("You have the Hot Potato! It will explode during this session. Don't be the last player holding it.")
-        .formatted(Formatting.AQUA)
+            Text.literal("You have the Hot Potato! It will explode during this session. Don't be the last player holding it.")
+                .formatted(Formatting.AQUA)
         );
 
         // Schedule fuse countdown
         TaskScheduler.scheduleTask(FUSE_DURATION, this::explode);
     }
 
-    public void passTo(ServerPlayerEntity nextPlayer) {
-        if (!active || !potatoAssigned || nextPlayer == null || nextPlayer == potatoHolder) return;
+    /**
+     * Repeatedly checks which player currently has the Hot Potato.
+     */
+    private void checkPotatoHolder() {
+        if (!active || potatoUuid == null) return;
 
-        lastHolder = potatoHolder;
-        potatoHolder = nextPlayer;
-        removePotato(lastHolder);
-        givePotato(potatoHolder);
-        potatoHolder.sendMessage(
-        Text.literal("You have the Hot Potato! It will explode during this session. Don't be the last player holding it.")
-        .formatted(Formatting.AQUA)
-        );
-        PlayerUtils.sendTitle(
+        ServerPlayerEntity foundHolder = null;
+
+        for (ServerPlayerEntity player : livesManager.getAlivePlayers()) {
+            for (int i = 0; i < player.getInventory().size(); i++) {
+                ItemStack stack = player.getInventory().getStack(i);
+                if (isHotPotato(stack)) {
+                    foundHolder = player;
+                    break;
+                }
+            }
+            if (foundHolder != null) break;
+        }
+
+        if (foundHolder != null && foundHolder != potatoHolder) {
+            lastHolder = potatoHolder;
+            potatoHolder = foundHolder;
+
+            potatoHolder.sendMessage(
+                Text.literal("You now have the Hot Potato! It will explode during this session. Don't be the last player holding it.")
+                    .formatted(Formatting.AQUA)
+            );
+
+            PlayerUtils.sendTitle(
                 potatoHolder,
                 Text.literal("You have the Hot Potato!").formatted(Formatting.RED),
                 20, 40, 20
-        );
+            );
+        }
     }
 
     private void explode() {
@@ -189,10 +213,6 @@ public class HotPotato extends Wildcard {
 
     @Override
     public void deactivate() {
-        potatoHolder = null;
-        lastHolder = null;
-        active = false;
-        potatoAssigned = false;
-        potatoUuid = null;
+        reset();
     }
 }
