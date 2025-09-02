@@ -3,7 +3,6 @@ package net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.wildcard;
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcard;
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcards;
 import net.mat0u5.lifeseries.utils.player.PlayerUtils;
-import net.mat0u5.lifeseries.seasons.other.LivesManager;
 import net.mat0u5.lifeseries.seasons.other.WatcherManager;
 import net.mat0u5.lifeseries.utils.other.TaskScheduler;
 import net.minecraft.item.Items;
@@ -12,6 +11,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.component.DataComponentTypes;
+import net.minecraft.component.type.LoreComponent;
 import net.minecraft.component.type.NbtComponent;
 import net.minecraft.nbt.NbtCompound;
 
@@ -30,7 +30,7 @@ public class HotPotato extends Wildcard {
     private boolean potatoAssigned;
     private UUID potatoUuid;
 
-    private static final int DELAY_TICKS = 600;        // 30s before assignment
+    private static final int DELAY_TICKS = 200;        // 10s before assignment
     private static final int FUSE_DURATION = 13000;    // 10 minutes after assignment
     private static final String NBT_KEY = "HotPotatoUUID";
 
@@ -69,6 +69,7 @@ public class HotPotato extends Wildcard {
         potatoAssigned = true;
         fuseTicks = FUSE_DURATION;
 
+        // Only notify the holder
         PlayerUtils.sendTitle(
                 potatoHolder,
                 Text.literal("You have the Hot Potato!").formatted(Formatting.RED),
@@ -102,6 +103,7 @@ public class HotPotato extends Wildcard {
         removePotato(lastHolder);
         givePotato(potatoHolder);
 
+        // Only notify the new holder
         PlayerUtils.sendTitle(
                 potatoHolder,
                 Text.literal("You have the Hot Potato!").formatted(Formatting.RED),
@@ -113,28 +115,15 @@ public class HotPotato extends Wildcard {
         if (potatoHolder != null) {
             removePotato(potatoHolder);
 
-            int currentLives = livesManager.getPlayerLives(potatoHolder);
-            livesManager.setPlayerLives(potatoHolder, currentLives - 1);
-
-            // Console logging
-            System.out.println("[HotPotato] Exploded! Current holder: " + potatoHolder.getName().getString());
-            if (lastHolder != null) {
-                System.out.println("[HotPotato] Last holder: " + lastHolder.getName().getString());
-            } else {
-                System.out.println("[HotPotato] No previous holder.");
-            }
+            // Broadcast instead of removing a life
+            PlayerUtils.broadcastMessage(
+                    Text.literal(potatoHolder.getName().getString() + " didn't want to get rid of the Potato")
+                            .formatted(Formatting.RED)
+            );
 
             PlayerUtils.sendTitle(
                     potatoHolder,
                     Text.literal("The Hot Potato exploded!").formatted(Formatting.RED),
-                    20, 40, 20
-            );
-        }
-
-        if (lastHolder != null) {
-            PlayerUtils.sendTitle(
-                    lastHolder,
-                    Text.literal("You just passed the Hot Potato.").formatted(Formatting.GRAY),
                     20, 40, 20
             );
         }
@@ -147,6 +136,13 @@ public class HotPotato extends Wildcard {
 
         ItemStack potato = new ItemStack(Items.POTATO);
         potato.set(DataComponentTypes.CUSTOM_NAME, Text.literal("Hot Potato").formatted(Formatting.RED, Formatting.BOLD));
+
+        // Lore (extra description text)
+        potato.set(DataComponentTypes.LORE, new LoreComponent(List.of(
+                Text.literal("You have been given the Hot Potato").formatted(Formatting.GRAY),
+                Text.literal("It will explode during this session").formatted(Formatting.DARK_RED),
+                Text.literal("Don't be the last player holding it").formatted(Formatting.RED)
+        )));
 
         // Tag with UUID for tracking
         NbtCompound tag = new NbtCompound();
@@ -209,4 +205,3 @@ public class HotPotato extends Wildcard {
         return lastHolder;
     }
 }
-//test
