@@ -77,6 +77,18 @@ public class Events {
         ServerLivingEntityEvents.AFTER_DEATH.register(Events::onEntityDeath);
         UseEntityCallback.EVENT.register(Events::onRightClickEntity);
         AttackEntityCallback.EVENT.register(Events::onAttackEntity);
+
+    PlayerPickupItemCallback.EVENT.register((player, itemEntity) -> {
+        if (!(player instanceof ServerPlayerEntity serverPlayer)) return true;
+        ItemStack stack = itemEntity.getStack();
+        HotPotato hotPotato = HotPotato.getInstance(); // get your active HotPotato
+        if (hotPotato.isActive() && hotPotato.isHotPotato(stack)) {
+            hotPotato.onPlayerPickupPotato(serverPlayer, stack);
+            itemEntity.remove(); // remove the item entity
+            return false; // cancel default pickup
+        }
+        return true;
+    });
     }
 
     private static void onReloadStart(MinecraftServer server, LifecycledResourceManager resourceManager) {

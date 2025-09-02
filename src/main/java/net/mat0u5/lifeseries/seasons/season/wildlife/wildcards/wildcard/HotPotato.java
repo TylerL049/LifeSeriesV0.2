@@ -84,6 +84,7 @@ public class HotPotato extends Wildcard {
 
     private void explode() {
         if (!active || !potatoAssigned) return;
+
         if (potatoHolder != null) {
             removePotato(potatoHolder);
             PlayerUtils.broadcastMessage(
@@ -95,7 +96,11 @@ public class HotPotato extends Wildcard {
                     Text.literal("The Hot Potato exploded!").formatted(Formatting.RED),
                     20, 40, 20
             );
+
+            // Kill the player
+            potatoHolder.damage(DamageSource.GENERIC, Float.MAX_VALUE);
         }
+
         reset();
     }
 
