@@ -87,15 +87,11 @@ public class HotPotato extends Wildcard {
         potatoHolder = nextPlayer;
         removePotato(lastHolder);
         givePotato(potatoHolder);
-
+        potatoHolder.sendMessage(Text.of("You have the Hot Potato! Hover over it for info"));
         PlayerUtils.sendTitle(
                 potatoHolder,
-                Text.literal("You have the Hot Potato!\nHover over it for info").formatted(Formatting.RED),
+                Text.literal("You have the Hot Potato!").formatted(Formatting.RED),
                 20, 40, 20
-        );
-        PlayerUtils.sendChatMessage(
-                potatoHolder,
-                Text.literal("You have the hot potato, Hover over it for more info.").formatted(Formatting.YELLOW)
         );
     }
 
