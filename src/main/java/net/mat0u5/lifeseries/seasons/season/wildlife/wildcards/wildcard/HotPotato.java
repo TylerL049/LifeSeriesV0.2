@@ -70,8 +70,10 @@ public class HotPotato extends Wildcard {
                 Text.literal("You have the Hot Potato!").formatted(Formatting.RED),
                 20, 40, 20
         );
+        potatoHolder.sendMessage(
         Text.literal("You have the Hot Potato! It will explode during this session. Don't be the last player holding it.")
-        .formatted(Formatting.AQUA));
+        .formatted(Formatting.AQUA)
+        );
 
         // Schedule fuse countdown
         TaskScheduler.scheduleTask(FUSE_DURATION, this::explode);
@@ -86,7 +88,8 @@ public class HotPotato extends Wildcard {
         givePotato(potatoHolder);
         potatoHolder.sendMessage(
         Text.literal("You have the Hot Potato! It will explode during this session. Don't be the last player holding it.")
-        .formatted(Formatting.AQUA));
+        .formatted(Formatting.AQUA)
+        );
         PlayerUtils.sendTitle(
                 potatoHolder,
                 Text.literal("You have the Hot Potato!").formatted(Formatting.RED),
