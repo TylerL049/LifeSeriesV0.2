@@ -70,10 +70,7 @@ public class HotPotato extends Wildcard {
                 Text.literal("You have the Hot Potato!\nHover over it for info").formatted(Formatting.RED),
                 20, 40, 20
         );
-        PlayerUtils.sendChatMessage(
-                potatoHolder,
-                Text.literal("You have the hot potato, Hover over it for more info.").formatted(Formatting.YELLOW)
-        );
+        potatoHolder.sendMessage(Text.of("You have the Hot Potato! Hover over it for info"));
 
         // Schedule fuse countdown
         scheduleClickCountdown(potatoHolder, 5, 10); // 5 clicks, 10 ticks apart
@@ -95,32 +92,33 @@ public class HotPotato extends Wildcard {
         );
     }
 
-    private void scheduleClickCountdown(ServerPlayerEntity player, int clicksLeft, int delayTicks) {
-        if (clicksLeft <= 0) return;
-        TaskScheduler.scheduleTask(delayTicks, () -> {
-            if (player != null) {
-                player.getWorld().playSound(
-                        player.getBlockPos(),
-                        SoundEvents.BLOCK_DISPENSER_DISPENSE, // fixed sound
-                        SoundCategory.PLAYERS,
-                        1.0f,
-                        1.0f
-                );
-                scheduleClickCountdown(player, clicksLeft - 1, delayTicks);
-            }
-        });
-    }
-
     private void explode() {
         if (potatoHolder != null) {
             removePotato(potatoHolder);
 
+            // Play creeper primed build-up sound 5 times with 5-tick intervals
+            for (int i = 0; i < 5; i++) {
+                int delay = i * 5; // 5 ticks apart
+                TaskScheduler.scheduleTask(delay, () -> {
+                    potatoHolder.getWorld().playSound(
+                        null, // only nearby players will hear
+                        potatoHolder.getBlockPos(),
+                        SoundEvents.ENTITY_CREEPER_PRIMED,
+                        SoundCategory.PLAYERS,
+                        1.0f, // volume
+                        1.0f  // pitch
+                    );
+                });
+            }
+
+            // Show centered title
             PlayerUtils.sendTitle(
                     potatoHolder,
                     Text.literal("The Hot Potato\nexploded!").formatted(Formatting.RED),
                     20, 40, 20
             );
 
+            // Broadcast to others
             PlayerUtils.broadcastMessage(
                     Text.literal(potatoHolder.getName().getString() + " didn't want to get rid of the Potato")
                             .formatted(Formatting.RED)
