@@ -100,9 +100,9 @@ public class HotPotato extends Wildcard {
         if (potatoHolder != null) {
             removePotato(potatoHolder);
 
-            // Play creeper death sound nearby
+            // Play creeper explosion sound nearby
             potatoHolder.getWorld().playSound(
-                    null, // sound heard by nearby players
+                    null,
                     potatoHolder.getBlockPos(),
                     SoundEvents.ENTITY_CREEPER_DEATH,
                     SoundCategory.PLAYERS,
@@ -114,30 +114,11 @@ public class HotPotato extends Wildcard {
                     Text.literal(potatoHolder.getName().getString() + " didn't want to get rid of the Potato")
                             .formatted(Formatting.RED)
             );
-
             PlayerUtils.sendTitle(
                     potatoHolder,
                     Text.literal("The Hot Potato exploded!").formatted(Formatting.RED),
                     20, 40, 20
             );
-
-            try {
-                // Get the ServerWorld
-                ServerWorld world = potatoHolder.getServerWorld();
-
-                // Get the explosion DamageSource
-                DamageSource explosion = new DamageSource(
-                        world.getRegistryManager()
-                             .getOrThrow(RegistryKeys.DAMAGE_TYPE)
-                             .getOrThrow(new Identifier("minecraft", "explosion"))
-                );
-
-                // Deal explosion damage to the player
-                potatoHolder.damage(world, explosion, 1000f);
-
-            } catch (Exception e) {
-                Main.LOGGER.error("Failed to damage Hot Potato player: " + e.getMessage());
-            }
         }
 
         reset();
