@@ -91,22 +91,18 @@ public class HotPotato extends Wildcard {
 
     private void explode() {
         if (potatoHolder != null) {
+            removePotato(potatoHolder);
+
             // Play creeper explosion sound
             potatoHolder.getWorld().playSound(
-                    null,
-                    potatoHolder.getX(),
-                    potatoHolder.getY(),
-                    potatoHolder.getZ(),
-                    SoundEvents.ENTITY_CREEPER_PRIMED,
-                    SoundCategory.PLAYERS,
-                    1.0F,
-                    1.0F
+                    null, // all players hear it
+                    potatoHolder.getBlockPos(),
+                    net.minecraft.sound.SoundEvents.ENTITY_CREEPER_PRIMED,
+                    net.minecraft.sound.SoundCategory.PLAYERS,
+                    1.0f, // volume
+                    1.0f  // pitch
             );
 
-            // Kill the player
-            killPlayer(potatoHolder);
-
-            removePotato(potatoHolder);
             PlayerUtils.broadcastMessage(
                     Text.literal(potatoHolder.getName().getString() + " didn't want to get rid of the Potato")
                             .formatted(Formatting.RED)
@@ -116,14 +112,12 @@ public class HotPotato extends Wildcard {
                     Text.literal("The Hot Potato exploded!").formatted(Formatting.RED),
                     20, 40, 20
             );
-        }
-        reset();
-    }
 
-    private void killPlayer(ServerPlayerEntity player) {
-        if (player != null) {
-            player.damage(player.getWorld(), player.getDamageSources().magic(), Float.MAX_VALUE);
+            // Apply instant damage to "kill" the player
+            potatoHolder.addStatusEffect(new StatusEffectInstance(StatusEffects.INSTANT_DAMAGE, 1, 255, false, false, false));
         }
+
+        reset();
     }
 
     private void givePotato(ServerPlayerEntity player) {
