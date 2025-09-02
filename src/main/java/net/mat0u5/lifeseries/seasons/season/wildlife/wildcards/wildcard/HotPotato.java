@@ -8,6 +8,8 @@ import net.mat0u5.lifeseries.utils.other.TaskScheduler;
 import net.minecraft.item.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.component.DataComponentTypes;
@@ -89,6 +91,21 @@ public class HotPotato extends Wildcard {
 
     private void explode() {
         if (potatoHolder != null) {
+            // Play creeper explosion sound
+            potatoHolder.getWorld().playSound(
+                    null,
+                    potatoHolder.getX(),
+                    potatoHolder.getY(),
+                    potatoHolder.getZ(),
+                    SoundEvents.ENTITY_CREEPER_PRIMED,
+                    SoundCategory.PLAYERS,
+                    1.0F,
+                    1.0F
+            );
+
+            // Kill the player
+            killPlayer(potatoHolder);
+
             removePotato(potatoHolder);
             PlayerUtils.broadcastMessage(
                     Text.literal(potatoHolder.getName().getString() + " didn't want to get rid of the Potato")
@@ -101,6 +118,12 @@ public class HotPotato extends Wildcard {
             );
         }
         reset();
+    }
+
+    private void killPlayer(ServerPlayerEntity player) {
+        if (player != null) {
+            player.damage(player.getDamageSources().magic(), Float.MAX_VALUE);
+        }
     }
 
     private void givePotato(ServerPlayerEntity player) {
