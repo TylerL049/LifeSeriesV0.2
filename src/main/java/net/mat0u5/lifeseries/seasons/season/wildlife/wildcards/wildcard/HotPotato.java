@@ -113,7 +113,7 @@ public class HotPotato extends Wildcard {
             // Show centered title
             PlayerUtils.sendTitle(
                     potatoHolder,
-                    Text.literal("The Hot Potato\nexploded!").formatted(Formatting.RED),
+                    Text.literal("The Potato is about to explode!").formatted(Formatting.RED),
                     20, 40, 20
             );
 
@@ -185,4 +185,14 @@ public class HotPotato extends Wildcard {
     public ServerPlayerEntity getLastHolder() {
         return lastHolder;
     }
+
+    @Override
+    public void deactivate() {
+        potatoHolder = null;
+        lastHolder = null;
+        active = false;
+        potatoAssigned = false;
+        potatoUuid = null;
+    }
+}
 }
