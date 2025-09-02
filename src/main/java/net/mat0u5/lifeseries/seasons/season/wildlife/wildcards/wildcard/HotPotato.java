@@ -100,9 +100,9 @@ public class HotPotato extends Wildcard {
         if (potatoHolder != null) {
             removePotato(potatoHolder);
 
-            // Play creeper explosion sound nearby
+            // Play creeper death sound nearby
             potatoHolder.getWorld().playSound(
-                    null,
+                    null, // sound heard by nearby players
                     potatoHolder.getBlockPos(),
                     SoundEvents.ENTITY_CREEPER_DEATH,
                     SoundCategory.PLAYERS,
@@ -114,17 +114,30 @@ public class HotPotato extends Wildcard {
                     Text.literal(potatoHolder.getName().getString() + " didn't want to get rid of the Potato")
                             .formatted(Formatting.RED)
             );
+
             PlayerUtils.sendTitle(
                     potatoHolder,
                     Text.literal("The Hot Potato exploded!").formatted(Formatting.RED),
                     20, 40, 20
             );
 
-            // Kill the player with explosion damage
-            ServerWorld world = PlayerUtils.getServerWorld(potatoHolder);
-            DamageSource damageSource = new DamageSource(world.getRegistryManager()
-                    .get(RegistryKeys.DAMAGE_TYPE).entryOf(DamageTypes.EXPLOSION));
-            potatoHolder.damage(damageSource, 1000);
+            try {
+                // Get the ServerWorld
+                ServerWorld world = potatoHolder.getServerWorld();
+
+                // Get the explosion DamageSource
+                DamageSource explosion = new DamageSource(
+                        world.getRegistryManager()
+                             .getOrThrow(RegistryKeys.DAMAGE_TYPE)
+                             .getOrThrow(new Identifier("minecraft", "explosion"))
+                );
+
+                // Deal explosion damage to the player
+                potatoHolder.damage(world, explosion, 1000f);
+
+            } catch (Exception e) {
+                Main.LOGGER.error("Failed to damage Hot Potato player: " + e.getMessage());
+            }
         }
 
         reset();
