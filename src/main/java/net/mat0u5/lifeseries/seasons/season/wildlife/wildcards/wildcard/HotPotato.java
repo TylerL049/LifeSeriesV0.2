@@ -122,7 +122,7 @@ public class HotPotato extends Wildcard {
 
     private void killPlayer(ServerPlayerEntity player) {
         if (player != null) {
-            player.damage(player.getDamageSources().magic(), Float.MAX_VALUE);
+            player.damage(player.getWorld(), player.getDamageSources().magic(), Float.MAX_VALUE);
         }
     }
 
