@@ -4,10 +4,6 @@ import net.fabricmc.fabric.api.entity.event.v1.ServerLivingEntityEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
-import net.fabricmc.fabric.api.event.player.UseBlockCallback;
-import net.fabricmc.fabric.api.event.player.UseEntityCallback;
-import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.mat0u5.lifeseries.Main;
 import net.mat0u5.lifeseries.entity.fakeplayer.FakePlayer;
 import net.mat0u5.lifeseries.network.NetworkHandlerServer;
@@ -20,8 +16,10 @@ import net.mat0u5.lifeseries.seasons.season.secretlife.TaskManager;
 import net.mat0u5.lifeseries.seasons.season.wildlife.morph.MorphManager;
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.wildcard.snails.SnailSkinsServer;
 import net.mat0u5.lifeseries.seasons.session.SessionTranscript;
+import net.mat0u5.lifeseries.utils.other.OtherUtils;
 import net.mat0u5.lifeseries.utils.other.TaskScheduler;
 import net.mat0u5.lifeseries.utils.player.PlayerUtils;
+import net.mat0u5.lifeseries.utils.versions.UpdateChecker;
 import net.mat0u5.lifeseries.utils.world.ItemStackUtils;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
@@ -40,25 +38,20 @@ import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
-import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.wildcard.HotPotato;
 
 import java.util.*;
-import java.util.List;
-import java.util.UUID;
 
 import static net.mat0u5.lifeseries.Main.*;
+//? if <= 1.21.2
+import net.fabricmc.fabric.api.event.player.*;
+//? if >= 1.21.2
+/*import net.fabricmc.fabric.api.event.player.*;*/
 
 public class Events {
     public static boolean skipNextTickReload = false;
     public static boolean updatePlayerListsNextTick = false;
 
-    public static final List<UUID> joiningPlayers = new ArrayList<>();
-    private static final Map<UUID, Vec3d> joiningPlayersPos = new HashMap<>();
-    private static final Map<UUID, Float> joiningPlayersYaw = new HashMap<>();
-    private static final Map<UUID, Float> joiningPlayersPitch = new HashMap<>();
-
     public static void register() {
-        // Server lifecycle
         ServerLifecycleEvents.SERVER_STARTING.register(Events::onServerStarting);
         ServerLifecycleEvents.SERVER_STARTED.register(Events::onServerStart);
         ServerLifecycleEvents.SERVER_STOPPING.register(Events::onServerStopping);
@@ -66,38 +59,24 @@ public class Events {
         ServerLifecycleEvents.START_DATA_PACK_RELOAD.register(Events::onReloadStart);
         ServerLifecycleEvents.END_DATA_PACK_RELOAD.register(Events::onReloadEnd);
 
-        // Player interactions
         AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) -> {
-            if (!(player instanceof ServerPlayerEntity serverPlayer)) return ActionResult.PASS;
-            return onBlockAttack(serverPlayer, world, pos);
+            if (!(player instanceof ServerPlayerEntity)) {
+                return ActionResult.PASS; // Only handle server-side events
+            }
+
+            return Events.onBlockAttack((ServerPlayerEntity) player, world, pos);
         });
         UseBlockCallback.EVENT.register(Events::onBlockUse);
-        UseEntityCallback.EVENT.register(Events::onRightClickEntity);
-        AttackEntityCallback.EVENT.register(Events::onAttackEntity);
-
+        //? if >= 1.21.2 {
+        /*UseItemCallback.EVENT.register(Events::onItemUse);
+        *///?}
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> onPlayerJoin(handler.getPlayer()));
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> onPlayerDisconnect(handler.getPlayer()));
-
-        // Server tick
         ServerTickEvents.END_SERVER_TICK.register(Events::onServerTickEnd);
 
-        // Living entity death
         ServerLivingEntityEvents.AFTER_DEATH.register(Events::onEntityDeath);
-    }
-
-    // Hot Potato pickup scan (called each server tick)
-    public static void scanHotPotatoPickup(MinecraftServer server) {
-        HotPotato hotPotato = HotPotato.getInstance();
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
-            for (int i = 0; i < player.getInventory().size(); i++) {
-                ItemStack stack = player.getInventory().getStack(i);
-                if (hotPotato.isHotPotato(stack)) {
-                    hotPotato.onPlayerPickupPotato(player, stack);
-                    player.getInventory().removeStack(i);
-                    break;
-                }
-            }
-        }
+        UseEntityCallback.EVENT.register(Events::onRightClickEntity);
+        AttackEntityCallback.EVENT.register(Events::onAttackEntity);
     }
 
     private static void onReloadStart(MinecraftServer server, LifecycledResourceManager resourceManager) {
@@ -130,6 +109,7 @@ public class Events {
         if (isFakePlayer(player)) return;
 
         try {
+            UpdateChecker.onPlayerJoin(player);
             currentSeason.onPlayerFinishJoining(player);
             TaskScheduler.scheduleTask(20, () -> {
                 NetworkHandlerServer.tryKickFailedHandshake(player);
@@ -151,6 +131,7 @@ public class Events {
 
     private static void onServerStopping(MinecraftServer server) {
         try {
+            UpdateChecker.shutdownExecutor();
             currentSession.sessionEnd();
         }catch (Exception e) {Main.LOGGER.error(e.getMessage());}
     }
@@ -189,11 +170,7 @@ public class Events {
             if (NetworkHandlerServer.updatedConfigThisTick) {
                 NetworkHandlerServer.onUpdatedConfig();
             }
-
-            // Hot Potato pickup scan
-            scanHotPotatoPickup(server);
-
-        } catch(Exception e) {
+        }catch(Exception e) {
             Main.LOGGER.error(e.getMessage());
         }
     }
@@ -203,15 +180,23 @@ public class Events {
         try {
             if (!Main.isLogicalSide()) return;
             if (entity instanceof ServerPlayerEntity player) {
-                onPlayerDeath(player, source);
+                Events.onPlayerDeath(player, source);
                 return;
             }
             currentSeason.onMobDeath(entity, source);
         } catch(Exception e) {Main.LOGGER.error(e.getMessage());}
     }
+    public static void onEntityDropItems(LivingEntity entity, DamageSource source) {
+        if (isFakePlayer(entity)) return;
+        try {
+            if (!Main.isLogicalSide()) return;
+            currentSeason.onEntityDropItems(entity, source);
+        } catch(Exception e) {Main.LOGGER.error(e.getMessage());}
+    }
 
     public static void onPlayerDeath(ServerPlayerEntity player, DamageSource source) {
         if (isExcludedPlayer(player)) return;
+
         try {
             if (!Main.isLogicalSide()) return;
             currentSeason.onPlayerDeath(player, source);
@@ -220,45 +205,133 @@ public class Events {
 
     public static ActionResult onBlockUse(PlayerEntity player, World world, Hand hand, BlockHitResult hitResult) {
         if (isFakePlayer(player)) return ActionResult.PASS;
+
+        if (player instanceof ServerPlayerEntity serverPlayer &&
+                world instanceof ServerWorld serverWorld && Main.isLogicalSide()) {
+            try {
+                if (currentSeason instanceof SecretLife) {
+                    TaskManager.onBlockUse(
+                            serverPlayer,
+                            serverWorld,
+                            hitResult);
+                }
+                if (blacklist == null) return ActionResult.PASS;
+                return blacklist.onBlockUse(serverPlayer,serverWorld,hand,hitResult);
+            } catch(Exception e) {
+                Main.LOGGER.error(e.getMessage());
+                return ActionResult.PASS;
+            }
+        }
+        return ActionResult.PASS;
+    }
+
+    public static ActionResult onItemUse(PlayerEntity player, World world, Hand hand) {
+        if (isFakePlayer(player)) return ActionResult.PASS;
+
+        if (player instanceof ServerPlayerEntity serverPlayer &&
+                world instanceof ServerWorld serverWorld && Main.isLogicalSide()) {
+            try {
+                ItemStack itemStack = player.getStackInHand(hand);
+                if (ItemStackUtils.hasCustomComponentEntry(PlayerUtils.getEquipmentSlot(serverPlayer, 3), "FlightSuperpower") &&
+                        itemStack.isOf(Items.FIREWORK_ROCKET)) {
+                    return ActionResult.FAIL;
+                }
+            } catch(Exception e) {
+                Main.LOGGER.error(e.getMessage());
+                return ActionResult.PASS;
+            }
+        }
         return ActionResult.PASS;
     }
 
     public static ActionResult onBlockAttack(ServerPlayerEntity player, World world, BlockPos pos) {
         if (isFakePlayer(player)) return ActionResult.PASS;
-        return ActionResult.PASS;
+
+        try {
+            if (!Main.isLogicalSide()) return ActionResult.PASS;
+            if (blacklist == null) return ActionResult.PASS;
+            if (world.isClient()) return ActionResult.PASS;
+            return blacklist.onBlockAttack(player,world,pos);
+        } catch(Exception e) {
+            Main.LOGGER.error(e.getMessage());
+            return ActionResult.PASS;
+        }
     }
 
     private static ActionResult onRightClickEntity(PlayerEntity player, World world, Hand hand, Entity entity, EntityHitResult hitResult) {
         if (isFakePlayer(player)) return ActionResult.PASS;
+
+        try {
+            if (!Main.isLogicalSide()) return ActionResult.PASS;
+            if (player instanceof ServerPlayerEntity serverPlayer) {
+                currentSeason.onRightClickEntity(serverPlayer, world, hand, entity, hitResult);
+            }
+        } catch(Exception e) {
+            Main.LOGGER.error(e.getMessage());
+        }
         return ActionResult.PASS;
     }
-
     private static ActionResult onAttackEntity(PlayerEntity player, World world, Hand hand, Entity entity, EntityHitResult hitResult) {
         if (isFakePlayer(player)) return ActionResult.PASS;
+
+        try {
+            if (!Main.isLogicalSide()) return ActionResult.PASS;
+            if (player instanceof ServerPlayerEntity serverPlayer) {
+                currentSeason.onAttackEntity(serverPlayer, world, hand, entity, hitResult);
+            }
+        } catch(Exception e) {
+            Main.LOGGER.error(e.getMessage());
+        }
         return ActionResult.PASS;
     }
 
-    // Joining player helpers
+    /*
+        Non-events
+     */
+    public static final List<UUID> joiningPlayers = new ArrayList<>();
+    private static final Map<UUID, Vec3d> joiningPlayersPos = new HashMap<>();
+    private static final Map<UUID, Float> joiningPlayersYaw = new HashMap<>();
+    private static final Map<UUID, Float> joiningPlayersPitch = new HashMap<>();
     public static void playerStartJoining(ServerPlayerEntity player) {
+        NetworkHandlerServer.sendHandshake(player);
+        NetworkHandlerServer.sendUpdatePacketTo(player);
+        SnailSkinsServer.sendStoredImages(List.of(player));
         joiningPlayers.add(player.getUuid());
         joiningPlayersPos.put(player.getUuid(), player.getPos());
         joiningPlayersYaw.put(player.getUuid(), player.getYaw());
         joiningPlayersPitch.put(player.getUuid(), player.getPitch());
     }
-
     public static void checkPlayerFinishJoiningTick() {
-        for (UUID uuid : new ArrayList<>(joiningPlayers)) {
+        for (Map.Entry<UUID, Vec3d> entry : joiningPlayersPos.entrySet()) {
+            UUID uuid = entry.getKey();
             ServerPlayerEntity player = PlayerUtils.getPlayer(uuid);
             if (player == null) continue;
-            boolean finished = false;
-            if (!player.getPos().equals(joiningPlayersPos.get(uuid))) finished = true;
-            if (player.getYaw() != joiningPlayersYaw.get(uuid)) finished = true;
-            if (player.getPitch() != joiningPlayersPitch.get(uuid)) finished = true;
-            if (finished) {
-                onPlayerFinishJoining(player);
-                finishedJoining(uuid);
-            }
+            if (player.getPos().equals(entry.getValue())) continue;
+            onPlayerFinishJoining(player);
+            finishedJoining(player.getUuid());
+            return;
         }
+        //Yaw
+        for (Map.Entry<UUID, Float> entry : joiningPlayersYaw.entrySet()) {
+            UUID uuid = entry.getKey();
+            ServerPlayerEntity player = PlayerUtils.getPlayer(uuid);
+            if (player == null) continue;
+            if (player.getYaw() == entry.getValue()) continue;
+            onPlayerFinishJoining(player);
+            finishedJoining(player.getUuid());
+            return;
+        }
+        //Pitch
+        for (Map.Entry<UUID, Float> entry : joiningPlayersPitch.entrySet()) {
+            UUID uuid = entry.getKey();
+            ServerPlayerEntity player = PlayerUtils.getPlayer(uuid);
+            if (player == null) continue;
+            if (player.getPitch() == entry.getValue()) continue;
+            onPlayerFinishJoining(player);
+            finishedJoining(player.getUuid());
+            return;
+        }
+
     }
 
     public static void finishedJoining(UUID uuid) {
@@ -269,10 +342,13 @@ public class Events {
     }
 
     public static boolean isExcludedPlayer(Entity entity) {
-        if (entity instanceof ServerPlayerEntity player && WatcherManager.isWatcher(player)) return true;
+        if (entity instanceof ServerPlayerEntity player) {
+            if (WatcherManager.isWatcher(player)) {
+                return true;
+            }
+        }
         return isFakePlayer(entity);
     }
-
     public static boolean isFakePlayer(Entity entity) {
         return entity instanceof FakePlayer;
     }
