@@ -52,11 +52,11 @@ public class HotPotato extends Wildcard {
         this.potatoAssigned = false;
         this.potatoUuid = UUID.randomUUID();
 
-        // Wait a few seconds, then assign potato
+        // Assign potato to a random player after delay
         TaskScheduler.scheduleTask(DELAY_TICKS, this::assignPotatoToRandomPlayer);
 
-        // Start scanning inventories
-        TaskScheduler.scheduleRepeatingTask(CHECK_INTERVAL, this::checkPotatoHolder);
+        // Start inventory checking (self-rescheduling)
+        checkPotatoHolder();
     }
 
     private void assignPotatoToRandomPlayer() {
@@ -86,7 +86,7 @@ public class HotPotato extends Wildcard {
     }
 
     /**
-     * Repeatedly checks which player currently has the Hot Potato.
+     * Self-rescheduling inventory check for the Hot Potato.
      */
     private void checkPotatoHolder() {
         if (!active || potatoUuid == null) return;
@@ -104,6 +104,7 @@ public class HotPotato extends Wildcard {
             if (foundHolder != null) break;
         }
 
+        // Update holder if it changed
         if (foundHolder != null && foundHolder != potatoHolder) {
             lastHolder = potatoHolder;
             potatoHolder = foundHolder;
@@ -119,6 +120,27 @@ public class HotPotato extends Wildcard {
                 20, 40, 20
             );
         }
+
+        // Reschedule itself
+        TaskScheduler.scheduleTask(CHECK_INTERVAL, this::checkPotatoHolder);
+    }
+
+    public void passTo(ServerPlayerEntity nextPlayer) {
+        if (!active || !potatoAssigned || nextPlayer == null || nextPlayer == potatoHolder) return;
+
+        lastHolder = potatoHolder;
+        potatoHolder = nextPlayer;
+        removePotato(lastHolder);
+        givePotato(potatoHolder);
+        potatoHolder.sendMessage(
+            Text.literal("You have the Hot Potato! It will explode during this session. Don't be the last player holding it.")
+                .formatted(Formatting.AQUA)
+        );
+        PlayerUtils.sendTitle(
+            potatoHolder,
+            Text.literal("You have the Hot Potato!").formatted(Formatting.RED),
+            20, 40, 20
+        );
     }
 
     private void explode() {
@@ -183,7 +205,7 @@ public class HotPotato extends Wildcard {
         }
     }
 
-    private boolean isHotPotato(ItemStack stack) {
+    public boolean isHotPotato(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
         NbtComponent comp = stack.get(DataComponentTypes.CUSTOM_DATA);
         if (comp == null) return false;
