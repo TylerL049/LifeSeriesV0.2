@@ -16,6 +16,7 @@ import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.LoreComponent;
 import net.minecraft.component.type.NbtComponent;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 
@@ -99,8 +100,8 @@ public class HotPotato extends Wildcard {
             potatoHolder.getWorld().playSound(
                     null, // all players hear it
                     potatoHolder.getBlockPos(),
-                    net.minecraft.sound.SoundEvents.ENTITY_CREEPER_PRIMED,
-                    net.minecraft.sound.SoundCategory.PLAYERS,
+                    SoundEvents.ENTITY_CREEPER_DEATH,
+                    SoundCategory.PLAYERS,
                     1.0f, // volume
                     1.0f  // pitch
             );
@@ -115,8 +116,8 @@ public class HotPotato extends Wildcard {
                     20, 40, 20
             );
 
-            // Apply instant damage to "kill" the player
-            potatoHolder.addStatusEffect(new StatusEffectInstance(StatusEffects.INSTANT_DAMAGE, 1, 255, false, false, false));
+            // Deal massive explosion damage
+            potatoHolder.damage(DamageSource.explosion(potatoHolder), 1000f);
         }
 
         reset();
