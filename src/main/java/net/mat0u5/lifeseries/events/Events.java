@@ -38,6 +38,7 @@ import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
+import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.wildcard.HotPotato;
 
 import java.util.*;
 
@@ -78,7 +79,7 @@ public class Events {
         UseEntityCallback.EVENT.register(Events::onRightClickEntity);
         AttackEntityCallback.EVENT.register(Events::onAttackEntity);
 
-    PlayerPickupItemCallback.EVENT.register((player, itemEntity) -> {
+    PlayerPickUpItemCallback.EVENT.register((player, itemEntity) -> {
         if (!(player instanceof ServerPlayerEntity serverPlayer)) return true;
         ItemStack stack = itemEntity.getStack();
         HotPotato hotPotato = HotPotato.getInstance(); // get your active HotPotato
