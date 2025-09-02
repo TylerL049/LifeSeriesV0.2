@@ -122,7 +122,6 @@ public class HotPotato extends Wildcard {
 
             // Kill the player with explosion damage
             ServerWorld world = PlayerUtils.getServerWorld(potatoHolder);
-            //? if <=1.21 {
             DamageSource damageSource = new DamageSource(world.getRegistryManager()
                     .get(RegistryKeys.DAMAGE_TYPE).entryOf(DamageTypes.EXPLOSION));
             potatoHolder.damage(damageSource, 1000);
