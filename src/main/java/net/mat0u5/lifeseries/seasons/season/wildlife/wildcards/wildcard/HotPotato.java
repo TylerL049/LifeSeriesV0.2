@@ -17,6 +17,8 @@ import net.minecraft.component.type.LoreComponent;
 import net.minecraft.component.type.NbtComponent;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.damage.DamageType;
+import net.minecraft.entity.damage.DamageTypes;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 
@@ -96,14 +98,14 @@ public class HotPotato extends Wildcard {
         if (potatoHolder != null) {
             removePotato(potatoHolder);
 
-            // Play creeper explosion sound
+            // Play creeper explosion sound only for nearby players
             potatoHolder.getWorld().playSound(
-                    null, // all players hear it
+                    null,
                     potatoHolder.getBlockPos(),
                     SoundEvents.ENTITY_CREEPER_DEATH,
                     SoundCategory.PLAYERS,
-                    1.0f, // volume
-                    1.0f  // pitch
+                    1.0f,
+                    1.0f
             );
 
             PlayerUtils.broadcastMessage(
@@ -116,8 +118,16 @@ public class HotPotato extends Wildcard {
                     20, 40, 20
             );
 
-            // Deal massive explosion damage
-            potatoHolder.damage(DamageSource.explosion(potatoHolder), 1000f);
+            // Kill the player using the datapack damage system
+            ServerPlayerEntity player = potatoHolder;
+            if (player != null) {
+                ServerWorld world = PlayerUtils.getServerWorld(player);
+
+                DamageSource explosion = new DamageSource(world.getRegistryManager()
+                        .get(RegistryKeys.DAMAGE_TYPE).entryOf(EXPLOSION_DAMAGE_TYPE)); // Replace with your explosion DamageType
+                player.setAttacker(this);
+                player.damage(explosion, 1000);
+            }
         }
 
         reset();
