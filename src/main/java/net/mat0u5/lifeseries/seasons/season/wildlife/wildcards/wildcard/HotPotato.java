@@ -2,13 +2,13 @@ package net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.wildcard;
 
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcard;
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcards;
+import net.mat0u5.lifeseries.utils.player.PlayerUtils;
 import net.mat0u5.lifeseries.seasons.other.WatcherManager;
-import net.mat0u5.lifeseries.utils.player.PlayerUtils;
 import net.mat0u5.lifeseries.utils.other.TaskScheduler;
-import net.mat0u5.lifeseries.utils.player.PlayerUtils;
 import net.minecraft.item.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtList;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -24,11 +24,6 @@ public class HotPotato extends Wildcard {
 
     private static HotPotato instance;
 
-    public static HotPotato getInstance() {
-        if (instance == null) instance = new HotPotato();
-        return instance;
-    }
-
     private ServerPlayerEntity potatoHolder;
     private ServerPlayerEntity lastHolder;
     private boolean active;
@@ -42,6 +37,11 @@ public class HotPotato extends Wildcard {
     private HotPotato() {
         this.active = false;
         this.potatoAssigned = false;
+    }
+
+    public static HotPotato getInstance() {
+        if (instance == null) instance = new HotPotato();
+        return instance;
     }
 
     @Override
@@ -60,34 +60,27 @@ public class HotPotato extends Wildcard {
     private void assignPotatoToRandomPlayer() {
         List<ServerPlayerEntity> candidates = livesManager.getAlivePlayers();
         candidates.removeIf(WatcherManager::isWatcher);
-
         if (candidates.isEmpty()) {
             reset();
             return;
         }
-
         potatoHolder = candidates.get(new Random().nextInt(candidates.size()));
         givePotato(potatoHolder);
         potatoAssigned = true;
-
         PlayerUtils.sendTitle(
                 potatoHolder,
                 Text.literal("You have the Hot Potato!").formatted(Formatting.RED),
                 20, 40, 20
         );
-
         TaskScheduler.scheduleTask(FUSE_DURATION, this::explode);
     }
 
     public void passTo(ServerPlayerEntity nextPlayer) {
         if (!active || !potatoAssigned || nextPlayer == null || nextPlayer == potatoHolder) return;
-
         lastHolder = potatoHolder;
         potatoHolder = nextPlayer;
-
         removePotato(lastHolder);
         givePotato(potatoHolder);
-
         PlayerUtils.sendTitle(
                 potatoHolder,
                 Text.literal("You have the Hot Potato!").formatted(Formatting.RED),
@@ -97,37 +90,44 @@ public class HotPotato extends Wildcard {
 
     private void explode() {
         if (!active || !potatoAssigned) return;
-
         if (potatoHolder != null) {
             removePotato(potatoHolder);
-
-            // Kill the player
-            potatoHolder.damage(DamageSource.GENERIC, Float.MAX_VALUE);
-
             PlayerUtils.broadcastMessage(
                     Text.literal(potatoHolder.getName().getString() + " didn't want to get rid of the Potato")
                             .formatted(Formatting.RED)
             );
-
             PlayerUtils.sendTitle(
                     potatoHolder,
                     Text.literal("The Hot Potato exploded!").formatted(Formatting.RED),
                     20, 40, 20
             );
+            // Kill the player
+            potatoHolder.damage(DamageSource.GENERIC, Float.MAX_VALUE);
         }
-
         reset();
     }
 
     private void givePotato(ServerPlayerEntity player) {
         if (player == null) return;
-
         ItemStack potato = new ItemStack(Items.POTATO);
         potato.setCustomName(Text.literal("Hot Potato").formatted(Formatting.RED, Formatting.BOLD));
 
-        NbtCompound tag = new NbtCompound();
-        tag.putString(NBT_KEY, potatoUuid.toString());
-        potato.getOrCreateNbt().put(NBT_KEY, potatoUuid.toString());
+        // Add lore
+        List<Text> lore = List.of(
+                Text.literal("You have been given the Hot Potato").formatted(Formatting.GRAY),
+                Text.literal("It will explode during this session").formatted(Formatting.DARK_RED),
+                Text.literal("Don't be the last player holding it").formatted(Formatting.RED)
+        );
+        NbtCompound display = new NbtCompound();
+        NbtList loreList = new NbtList();
+        for (Text line : lore) {
+            loreList.add(Text.Serializer.toJson(line));
+        }
+        display.put("Lore", loreList);
+        potato.getOrCreateNbt().put("display", display);
+
+        // Set HotPotato UUID
+        potato.getOrCreateNbt().putString(NBT_KEY, potatoUuid.toString());
 
         if (!player.getInventory().insertStack(potato)) {
             player.dropItem(potato, false);
@@ -136,7 +136,6 @@ public class HotPotato extends Wildcard {
 
     private void removePotato(ServerPlayerEntity player) {
         if (player == null) return;
-
         for (int i = 0; i < player.getInventory().size(); i++) {
             ItemStack stack = player.getInventory().getStack(i);
             if (isHotPotato(stack)) {
@@ -146,7 +145,7 @@ public class HotPotato extends Wildcard {
         }
     }
 
-    private boolean isHotPotato(ItemStack stack) {
+    public boolean isHotPotato(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
         if (!stack.getOrCreateNbt().contains(NBT_KEY)) return false;
         return potatoUuid != null && potatoUuid.toString().equals(stack.getOrCreateNbt().getString(NBT_KEY));
@@ -170,5 +169,10 @@ public class HotPotato extends Wildcard {
 
     public ServerPlayerEntity getLastHolder() {
         return lastHolder;
+    }
+
+    public void onPlayerPickupPotato(ServerPlayerEntity player, ItemStack stack) {
+        // Called when player picks up potato (optional logic)
+        passTo(player);
     }
 }
