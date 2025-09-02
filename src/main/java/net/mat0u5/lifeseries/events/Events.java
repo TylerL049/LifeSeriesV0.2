@@ -39,7 +39,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.wildcard.HotPotato;
-import net.fabricmc.fabric.api.event.player.PickupItemCallback;
 
 import java.util.*;
 import java.util.List; 
