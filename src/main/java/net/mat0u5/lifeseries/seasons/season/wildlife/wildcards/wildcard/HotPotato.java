@@ -195,4 +195,3 @@ public class HotPotato extends Wildcard {
         potatoUuid = null;
     }
 }
-}
