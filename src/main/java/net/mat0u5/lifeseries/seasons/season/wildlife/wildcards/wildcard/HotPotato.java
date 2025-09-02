@@ -8,7 +8,6 @@ import net.mat0u5.lifeseries.utils.other.TaskScheduler;
 import net.minecraft.item.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.registry.RegistryKeys;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
@@ -17,12 +16,6 @@ import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.LoreComponent;
 import net.minecraft.component.type.NbtComponent;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.damage.DamageType;
-import net.minecraft.entity.damage.DamageTypes;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
 
 import java.util.List;
 import java.util.Random;
@@ -78,7 +71,8 @@ public class HotPotato extends Wildcard {
                 20, 40, 20
         );
 
-        TaskScheduler.scheduleTask(FUSE_DURATION, this::explode);
+        // Schedule the countdown before explosion
+        TaskScheduler.scheduleTask(FUSE_DURATION - 50, this::explodeCountdown);
     }
 
     public void passTo(ServerPlayerEntity nextPlayer) {
@@ -94,31 +88,59 @@ public class HotPotato extends Wildcard {
                 Text.literal("You have the Hot Potato!").formatted(Formatting.RED),
                 20, 40, 20
         );
+
+        PlayerUtils.sendMessage(
+                potatoHolder,
+                Text.literal("You have the Hot Potato, Hover over it for more info.").formatted(Formatting.GOLD)
+        );
+    }
+
+    private void explodeCountdown() {
+        if (potatoHolder == null) return;
+
+        // Send explosion warning title
+        PlayerUtils.sendTitle(
+                potatoHolder,
+                Text.literal("Hot Potato").formatted(Formatting.RED),
+                Text.literal("is about to explode!").formatted(Formatting.RED),
+                20, 40, 20
+        );
+
+        // Play dispenser click sound 5 times
+        for (int i = 0; i < 5; i++) {
+            int delay = i * 10; // 10 ticks between clicks
+            TaskScheduler.scheduleTask(delay, () -> 
+                potatoHolder.getWorld().playSound(
+                    null,
+                    potatoHolder.getBlockPos(),
+                    SoundEvents.BLOCK_DISPENSER_CLICK,
+                    SoundCategory.PLAYERS,
+                    1.0f,
+                    1.0f
+                )
+            );
+        }
+
+        // Schedule actual explosion after clicks
+        TaskScheduler.scheduleTask(60, this::explode);
     }
 
     private void explode() {
         if (potatoHolder != null) {
             removePotato(potatoHolder);
 
-            // Play creeper explosion sound nearby
-            potatoHolder.getWorld().playSound(
-                    null,
-                    potatoHolder.getBlockPos(),
-                    SoundEvents.ENTITY_CREEPER_DEATH,
-                    SoundCategory.PLAYERS,
-                    1.0f,
-                    1.0f
+            PlayerUtils.broadcastMessage(
+                Text.literal(potatoHolder.getName().getString() + " didn't want to get rid of the Potato")
+                        .formatted(Formatting.RED)
             );
 
-            PlayerUtils.broadcastMessage(
-                    Text.literal(potatoHolder.getName().getString() + " didn't want to get rid of the Potato")
-                            .formatted(Formatting.RED)
-            );
             PlayerUtils.sendTitle(
-                    potatoHolder,
-                    Text.literal("The Hot Potato is about to explode!").formatted(Formatting.RED),
-                    20, 40, 20
+                potatoHolder,
+                Text.literal("The Hot Potato exploded!").formatted(Formatting.RED),
+                20, 40, 20
             );
+
+            // Here you can add damage logic later
         }
 
         reset();
@@ -141,6 +163,12 @@ public class HotPotato extends Wildcard {
         if (!player.getInventory().insertStack(potato)) {
             player.dropItem(potato, false);
         }
+
+        // Chat message on pickup
+        PlayerUtils.sendMessage(
+            player,
+            Text.literal("You have the Hot Potato, Hover over it for more info.").formatted(Formatting.GOLD)
+        );
     }
 
     private void removePotato(ServerPlayerEntity player) {
