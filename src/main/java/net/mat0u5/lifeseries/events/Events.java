@@ -42,6 +42,8 @@ import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.wildcard.HotPotat
 import net.fabricmc.fabric.api.event.player.PickupItemCallback;
 
 import java.util.*;
+import java.util.List; 
+import java.util.UUID;
 
 import static net.mat0u5.lifeseries.Main.*;
 //? if <= 1.21.2
@@ -80,17 +82,18 @@ public class Events {
         UseEntityCallback.EVENT.register(Events::onRightClickEntity);
         AttackEntityCallback.EVENT.register(Events::onAttackEntity);
 
-        PickupItemCallback.EVENT.register((player, itemEntity) -> {
-            if (!(player instanceof ServerPlayerEntity serverPlayer)) return true;
+        ServerTickEvents.END_PLAYER_TICK.register(player -> {
+            if (!(player instanceof ServerPlayerEntity serverPlayer)) return;
 
-            ItemStack stack = itemEntity.getStack();
-            HotPotato hotPotato = HotPotato.getInstance(); // singleton instance
-            if (hotPotato.isActive() && hotPotato.isHotPotato(stack)) {
-                hotPotato.onPlayerPickupPotato(serverPlayer, stack);
-                itemEntity.remove(); // remove the item entity
-                return false; // cancel normal pickup
+            HotPotato hotPotato = HotPotato.getInstance();
+            for (int i = 0; i < serverPlayer.getInventory().size(); i++) {
+                ItemStack stack = serverPlayer.getInventory().getStack(i);
+                if (hotPotato.isHotPotato(stack)) {
+                    hotPotato.onPlayerPickupPotato(serverPlayer, stack);
+                    serverPlayer.getInventory().removeStack(i);
+                    break;
+                }
             }
-            return true;
         });
     }
 
