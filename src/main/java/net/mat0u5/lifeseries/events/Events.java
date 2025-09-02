@@ -39,7 +39,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.wildcard.HotPotato;
-import net.fabricmc.fabric.api.event.player.PlayerPickupItemCallback;
+import net.fabricmc.fabric.api.event.player.PickupItemCallback;
 
 import java.util.*;
 
@@ -80,17 +80,18 @@ public class Events {
         UseEntityCallback.EVENT.register(Events::onRightClickEntity);
         AttackEntityCallback.EVENT.register(Events::onAttackEntity);
 
-    PlayerPickUpItemCallback.EVENT.register((player, itemEntity) -> {
-        if (!(player instanceof ServerPlayerEntity serverPlayer)) return true;
-        ItemStack stack = itemEntity.getStack();
-        HotPotato hotPotato = HotPotato.getInstance(); // get your active HotPotato
-        if (hotPotato.isActive() && hotPotato.isHotPotato(stack)) {
-            hotPotato.onPlayerPickupPotato(serverPlayer, stack);
-            itemEntity.remove(); // remove the item entity
-            return false; // cancel default pickup
-        }
-        return true;
-    });
+        PickupItemCallback.EVENT.register((player, itemEntity) -> {
+            if (!(player instanceof ServerPlayerEntity serverPlayer)) return true;
+
+            ItemStack stack = itemEntity.getStack();
+            HotPotato hotPotato = HotPotato.getInstance(); // singleton instance
+            if (hotPotato.isActive() && hotPotato.isHotPotato(stack)) {
+                hotPotato.onPlayerPickupPotato(serverPlayer, stack);
+                itemEntity.remove(); // remove the item entity
+                return false; // cancel normal pickup
+            }
+            return true;
+        });
     }
 
     private static void onReloadStart(MinecraftServer server, LifecycledResourceManager resourceManager) {
