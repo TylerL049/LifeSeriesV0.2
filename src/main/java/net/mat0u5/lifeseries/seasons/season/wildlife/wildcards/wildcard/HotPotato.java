@@ -116,7 +116,7 @@ public class HotPotato extends Wildcard {
             );
             PlayerUtils.sendTitle(
                     potatoHolder,
-                    Text.literal("The Hot Potato exploded!").formatted(Formatting.RED),
+                    Text.literal("The Hot Potato is about to explode!").formatted(Formatting.RED),
                     20, 40, 20
             );
         }
