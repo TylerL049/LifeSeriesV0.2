@@ -73,7 +73,6 @@ public class HotPotato extends Wildcard {
         potatoHolder.sendMessage(Text.of("You have the Hot Potato! Hover over it for info"));
 
         // Schedule fuse countdown
-        scheduleClickCountdown(potatoHolder, 5, 10); // 5 clicks, 10 ticks apart
         TaskScheduler.scheduleTask(FUSE_DURATION, this::explode);
     }
 
