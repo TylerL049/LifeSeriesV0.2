@@ -121,9 +121,7 @@ public class HotPotato extends Wildcard {
 
             // Kill the player with explosion damage
             ServerPlayerEntity player = potatoHolder;
-            ServerWorld world = (ServerWorld) player.getWorld();
-            DamageSource explosion = world.getDamageSources().explosion(player);
-            player.damage(world, explosion, 1000f);
+            player.damage(player.getDamageSources().explosion(), 1000f);
         }
 
         reset();
