@@ -125,7 +125,6 @@ public class HotPotato extends Wildcard {
             //? if <=1.21 {
             DamageSource damageSource = new DamageSource(world.getRegistryManager()
                     .get(RegistryKeys.DAMAGE_TYPE).entryOf(DamageTypes.EXPLOSION));
-            potatoHolder.setAttacker(this);
             potatoHolder.damage(damageSource, 1000);
         }
 
