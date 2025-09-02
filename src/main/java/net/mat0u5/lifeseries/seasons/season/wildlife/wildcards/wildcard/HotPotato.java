@@ -8,6 +8,7 @@ import net.mat0u5.lifeseries.utils.other.TaskScheduler;
 import net.minecraft.item.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.registry.RegistryKeys;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
@@ -124,8 +125,8 @@ public class HotPotato extends Wildcard {
             //? if <=1.21 {
             DamageSource damageSource = new DamageSource(world.getRegistryManager()
                     .get(RegistryKeys.DAMAGE_TYPE).entryOf(DamageTypes.EXPLOSION));
-            player.setAttacker(this);
-            player.damage(damageSource, 1000);
+            potatoHolder.setAttacker(this);
+            potatoHolder.damage(damageSource, 1000);
         }
 
         reset();
