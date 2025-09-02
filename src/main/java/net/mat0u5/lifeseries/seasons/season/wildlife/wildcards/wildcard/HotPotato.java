@@ -95,16 +95,15 @@ public class HotPotato extends Wildcard {
         if (potatoHolder != null) {
             removePotato(potatoHolder);
 
-            // Play creeper primed sound 5 times, 10 ticks apart
-                potatoHolder.getWorld().playSound(
-                    null,
-                    potatoHolder.getBlockPos(),
-                    SoundEvents.ENTITY_CREEPER_PRIMED,
-                    SoundCategory.PLAYERS,
-                    1.0f,
-                    1.0f
-                );
-            }
+            // Play creeper primed sound
+            potatoHolder.getWorld().playSound(
+                null,
+                potatoHolder.getBlockPos(),
+                SoundEvents.ENTITY_CREEPER_PRIMED,
+                SoundCategory.PLAYERS,
+                1.0f,
+                1.0f
+            );
 
             // Show centered title
             PlayerUtils.sendTitle(
