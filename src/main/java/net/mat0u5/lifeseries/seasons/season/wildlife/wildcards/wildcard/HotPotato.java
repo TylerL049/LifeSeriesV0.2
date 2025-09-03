@@ -184,10 +184,17 @@ public class HotPotato extends Wildcard {
         for (int i = 0; i < player.getInventory().size(); i++) {
             ItemStack stack = player.getInventory().getStack(i);
             if (isHotPotato(stack)) {
-                player.getInventory().removeStack(i);
-                i--;
+                player.getInventory().setStack(i, ItemStack.EMPTY);
             }
         }
+        if (isHotPotato(player.getOffHandStack())) {
+            player.getInventory().offHand.set(0, ItemStack.EMPTY);
+        }
+        if (isHotPotato(player.currentScreenHandler.getCursorStack())) {
+            player.currentScreenHandler.setCursorStack(ItemStack.EMPTY);
+        }
+        player.currentScreenHandler.sendContentUpdates();
+        player.playerScreenHandler.sendContentUpdates();
     }
 
     public boolean isHotPotato(ItemStack stack) {
@@ -207,6 +214,7 @@ public class HotPotato extends Wildcard {
         active = false;
         potatoAssigned = false;
         potatoUuid = null;
+        WildcardManager.activeWildcards.remove(Wildcards.HOT_POTATO);
     }
 
     public boolean isActive() {

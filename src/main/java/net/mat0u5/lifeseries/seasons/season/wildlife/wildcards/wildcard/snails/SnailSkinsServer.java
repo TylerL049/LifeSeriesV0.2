@@ -122,8 +122,5 @@ public class SnailSkinsServer {
 
         Path textureResult = new File("./config/lifeseries/wildlife/snailskins/example.png").toPath();
         handler.copyBundledSingleFile("/model/" + Main.MOD_ID + "/texture/example.png", textureResult);
-
-        Path customTextureResult = new File("./config/lifeseries/wildlife/snailskins/Talis04.png").toPath();
-        handler.copyBundledSingleFile("/model/" + Main.MOD_ID + "/texture/Talis04.png", customTextureResult);
     }
 }
