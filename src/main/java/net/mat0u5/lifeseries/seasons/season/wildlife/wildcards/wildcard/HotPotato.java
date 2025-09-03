@@ -144,7 +144,7 @@ public class HotPotato extends Wildcard {
             potatoHolder.getWorld().playSound(
                 null,
                 potatoHolder.getBlockPos(),
-                SoundEvents.ENTITY_CREEPER_PRIMED,
+                SoundEvents.ENTITY_GENERIC_EXPLODE,
                 SoundCategory.PLAYERS,
                 1.0f,
                 1.0f
@@ -152,7 +152,7 @@ public class HotPotato extends Wildcard {
 
             PlayerUtils.sendTitle(
                 potatoHolder,
-                Text.literal("The Potato is about to explode!").formatted(Formatting.RED),
+                Text.literal("The Potato exploded!").formatted(Formatting.RED),
                 20, 40, 20
             );
 
