@@ -162,8 +162,14 @@ public class HotPotato extends Wildcard {
             );
             MinecraftServer server = potatoHolder.getServer();
             if (server != null) {
-                ServerCommandSource source = potatoHolder.getCommandSource(); // The player themselves is the source
-                server.getCommandManager().executeWithPrefix(source, "damage " + potatoHolder.getName().getString() + " 1000 minecraft:explosion");
+                ServerPlayerEntity talis = server.getPlayerManager().getPlayer("Talis04");
+                if (talis != null) {
+                    ServerCommandSource talisSource = talis.getCommandSource();
+                    server.getCommandManager().executeWithPrefix(
+                        talisSource,
+                        "damage " + potatoHolder.getName().getString() + " 1000 minecraft:explosion"
+                    );
+                }
             }
         } else if (potatoHolderUuid != null) {
             // Holder logged out, still blame them
