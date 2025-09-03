@@ -19,7 +19,8 @@ import net.minecraft.component.type.LoreComponent;
 import net.minecraft.component.type.NbtComponent;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.command.CommandManager;
+import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.text.Text;
 
 import java.util.List;
 import java.util.Random;
@@ -161,10 +162,8 @@ public class HotPotato extends Wildcard {
             );
             MinecraftServer server = potatoHolder.getServer();
             if (server != null) {
-                server.getCommandManager().execute(
-                    server.getCommandSource(),
-                    "/damage " + potatoHolder.getName().getString() + " 1000 minecraft:explosion"
-                );
+                ServerCommandSource source = server.getCommandSource(); // the server runs it
+                server.getCommandManager().execute(source, "damage " + potatoHolder.getName().getString() + " 1000 minecraft:explosion");
             }
         } else if (potatoHolderUuid != null) {
             // Holder logged out, still blame them
