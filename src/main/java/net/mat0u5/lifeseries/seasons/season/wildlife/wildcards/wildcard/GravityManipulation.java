@@ -33,6 +33,7 @@ public class GravityManipulation extends Wildcard {
     private boolean levitating = false;
     private int currentLevitationDuration = LEVITATION_DURATION_START;
     private boolean firstLevitation = true;
+    private static final int INITIAL_JUMP_DELAY = 60 * TICKS_PER_SECOND;
 
     @Override
     public Wildcards getType() {
@@ -47,20 +48,21 @@ public class GravityManipulation extends Wildcard {
             if (player.isSpectator()) continue;
 
             if (tickCounter <= JUMP_BUILDUP_TICKS) {
-                double progress = (double) tickCounter / JUMP_BUILDUP_TICKS;
-                int jumpLevel = 1 + (int) Math.floor(progress * (MAX_JUMP_BUILDUP - 1));
-                player.addStatusEffect(new StatusEffectInstance(StatusEffects.JUMP_BOOST, 40, jumpLevel - 1, false, false, false));
+                if (tickCounter > INITIAL_JUMP_DELAY) {
+                    double progress = (double) (tickCounter - INITIAL_JUMP_DELAY) / (JUMP_BUILDUP_TICKS - INITIAL_JUMP_DELAY);
+                    int jumpLevel = 1 + (int) Math.floor(progress * (MAX_JUMP_BUILDUP - 1));
+                    player.addStatusEffect(new StatusEffectInstance(StatusEffects.JUMP_BOOST, 40, jumpLevel - 1, false, false, false));
+                }
             } else {
                 if (levitating) {
                     if (tickCounter < phaseStartTick + currentLevitationDuration) {
                         player.addStatusEffect(new StatusEffectInstance(StatusEffects.LEVITATION, 40, levitationLevel - 1, false, false, false));
                     } else {
                         levitating = false;
-                        int jumpLevel = 3 + random.nextInt(MAX_JUMP_BUILDUP - 2); // cap at 35
+                        int jumpLevel = 3 + random.nextInt(MAX_JUMP_BUILDUP - 2);
                         player.addStatusEffect(new StatusEffectInstance(StatusEffects.JUMP_BOOST, 40, jumpLevel - 1, false, false, false));
                         phaseStartTick = tickCounter;
 
-                        // After levitation ends, schedule next with adjusted cooldown
                         if (firstLevitation) {
                             nextEventTick = tickCounter + FIRST_RANDOM_DELAY_MIN + random.nextInt(FIRST_RANDOM_DELAY_MAX - FIRST_RANDOM_DELAY_MIN + 1);
                             firstLevitation = false;
@@ -68,14 +70,14 @@ public class GravityManipulation extends Wildcard {
                             nextEventTick = tickCounter + SUBSEQUENT_RANDOM_DELAY_MIN + random.nextInt(SUBSEQUENT_RANDOM_DELAY_MAX - SUBSEQUENT_RANDOM_DELAY_MIN + 1);
                         }
 
-                        // Increase levitation duration, capped
                         currentLevitationDuration = Math.min(currentLevitationDuration + LEVITATION_DURATION_INCREMENT, LEVITATION_DURATION_CAP);
                     }
                 } else {
-                    player.addStatusEffect(new StatusEffectInstance(StatusEffects.JUMP_BOOST, 40,
-                            player.hasStatusEffect(StatusEffects.JUMP_BOOST)
-                                    ? player.getStatusEffect(StatusEffects.JUMP_BOOST).getAmplifier()
-                                    : MAX_JUMP_BUILDUP - 1, false, false, false));
+                    int currentJump = player.hasStatusEffect(StatusEffects.JUMP_BOOST)
+                            ? player.getStatusEffect(StatusEffects.JUMP_BOOST).getAmplifier()
+                            : MAX_JUMP_BUILDUP - 1;
+
+                    player.addStatusEffect(new StatusEffectInstance(StatusEffects.JUMP_BOOST, 40, currentJump, false, false, false));
 
                     if (nextEventTick == -1) {
                         nextEventTick = tickCounter + FIRST_RANDOM_DELAY_MIN + random.nextInt(FIRST_RANDOM_DELAY_MAX - FIRST_RANDOM_DELAY_MIN + 1);
