@@ -2,6 +2,7 @@ package net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.wildcard;
 
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcard;
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcards;
+import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.WildcardManager;
 import net.mat0u5.lifeseries.utils.player.PlayerUtils;
 import net.mat0u5.lifeseries.seasons.other.WatcherManager;
 import net.mat0u5.lifeseries.utils.other.TaskScheduler;
@@ -180,7 +181,6 @@ public class HotPotato extends Wildcard {
 
     private void removePotato(ServerPlayerEntity player) {
         if (player == null) return;
-
         for (int i = 0; i < player.getInventory().size(); i++) {
             ItemStack stack = player.getInventory().getStack(i);
             if (isHotPotato(stack)) {
@@ -188,7 +188,7 @@ public class HotPotato extends Wildcard {
             }
         }
         if (isHotPotato(player.getOffHandStack())) {
-            player.getInventory().offHand.set(0, ItemStack.EMPTY);
+            player.getInventory().setStack(40, ItemStack.EMPTY);
         }
         if (isHotPotato(player.currentScreenHandler.getCursorStack())) {
             player.currentScreenHandler.setCursorStack(ItemStack.EMPTY);
