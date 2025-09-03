@@ -28,6 +28,7 @@ import static net.mat0u5.lifeseries.Main.livesManager;
 public class HotPotato extends Wildcard {
 
     private ServerPlayerEntity potatoHolder;
+    private UUID potatoHolderUuid;
     private ServerPlayerEntity lastHolder;
     private boolean active;
     private boolean potatoAssigned;
@@ -70,6 +71,7 @@ public class HotPotato extends Wildcard {
         }
 
         potatoHolder = candidates.get(new Random().nextInt(candidates.size()));
+        potatoHolderUuid = potatoHolder.getUuid();
         givePotato(potatoHolder);
         potatoAssigned = true;
 
@@ -102,7 +104,7 @@ public class HotPotato extends Wildcard {
             if (foundHolder != null) break;
         }
 
-        // If holder changed, pass potato
+        // Only update holder if item moved to a different player
         if (foundHolder != null && foundHolder != potatoHolder) {
             passTo(foundHolder);
         }
@@ -116,6 +118,7 @@ public class HotPotato extends Wildcard {
 
         lastHolder = potatoHolder;
         potatoHolder = nextPlayer;
+        potatoHolderUuid = nextPlayer.getUuid();
 
         removePotato(lastHolder);
         givePotato(potatoHolder);
@@ -133,6 +136,7 @@ public class HotPotato extends Wildcard {
 
     private void explode() {
         if (potatoHolder != null) {
+            // Online player -> play sound, show title
             potatoHolder.getWorld().playSound(
                 null,
                 potatoHolder.getBlockPos(),
@@ -150,6 +154,13 @@ public class HotPotato extends Wildcard {
 
             PlayerUtils.broadcastMessage(
                 Text.literal(potatoHolder.getName().getString() + " didn't want to get rid of the Potato")
+                        .formatted(Formatting.RED)
+            );
+        } else if (potatoHolderUuid != null) {
+            // Offline -> use stored UUID to get last known name
+            String name = livesManager.getNameFromUuid(potatoHolderUuid);
+            PlayerUtils.broadcastMessage(
+                Text.literal(name + " didn't want to get rid of the Potato")
                         .formatted(Formatting.RED)
             );
         }
@@ -203,6 +214,7 @@ public class HotPotato extends Wildcard {
         }
 
         potatoHolder = null;
+        potatoHolderUuid = null;
         lastHolder = null;
         active = false;
         potatoAssigned = false;
