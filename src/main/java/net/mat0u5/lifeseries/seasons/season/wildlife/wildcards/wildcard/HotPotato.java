@@ -1,4 +1,4 @@
-﻿papackage net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.wildcard;
+﻿package net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.wildcard;
 
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcard;
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcards;
@@ -128,7 +128,7 @@ public class HotPotato extends Wildcard {
         givePotato(potatoHolder);
 
         potatoHolder.sendMessage(
-            Text.literal("You have the Hot Potato! It could explode any second. Don't be the last player holding it.")
+            Text.literal("You have the Hot Potato! It will explode during this session. Don't be the last player holding it.")
                 .formatted(Formatting.AQUA)
         );
         PlayerUtils.sendTitle(
