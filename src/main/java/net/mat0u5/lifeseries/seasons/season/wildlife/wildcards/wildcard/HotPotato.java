@@ -6,6 +6,7 @@ import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.WildcardManager;
 import net.mat0u5.lifeseries.utils.player.PlayerUtils;
 import net.mat0u5.lifeseries.seasons.other.WatcherManager;
 import net.mat0u5.lifeseries.utils.other.TaskScheduler;
+import net.mat0u5.lifeseries.utils.itemstack.ItemStackUtils;
 import net.minecraft.item.Items;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -85,14 +86,14 @@ public class HotPotato extends Wildcard {
         // Schedule fuse countdown
         TaskScheduler.scheduleTask(FUSE_DURATION, this::explode);
     }
+
     private void checkPotatoHolder() {
-        if (!active || potatoUuid == null) return;
+        if (!active) return;
 
         ServerPlayerEntity foundHolder = null;
 
         for (ServerPlayerEntity player : livesManager.getAlivePlayers()) {
-            for (int i = 0; i < player.getInventory().size(); i++) {
-                ItemStack stack = player.getInventory().getStack(i);
+            for (ItemStack stack : PlayerUtils.getPlayerInventory(player)) {
                 if (isHotPotato(stack)) {
                     foundHolder = player;
                     break;
@@ -101,7 +102,7 @@ public class HotPotato extends Wildcard {
             if (foundHolder != null) break;
         }
 
-        // If holder changed, run proper pass logic
+        // If holder changed, pass potato
         if (foundHolder != null && foundHolder != potatoHolder) {
             passTo(foundHolder);
         }
@@ -110,14 +111,15 @@ public class HotPotato extends Wildcard {
         TaskScheduler.scheduleTask(CHECK_INTERVAL, this::checkPotatoHolder);
     }
 
-
     public void passTo(ServerPlayerEntity nextPlayer) {
         if (!active || !potatoAssigned || nextPlayer == null || nextPlayer == potatoHolder) return;
 
         lastHolder = potatoHolder;
         potatoHolder = nextPlayer;
+
         removePotato(lastHolder);
         givePotato(potatoHolder);
+
         potatoHolder.sendMessage(
             Text.literal("You have the Hot Potato! It will explode during this session. Don't be the last player holding it.")
                 .formatted(Formatting.AQUA)
@@ -131,9 +133,6 @@ public class HotPotato extends Wildcard {
 
     private void explode() {
         if (potatoHolder != null) {
-            removePotato(potatoHolder);
-
-            // Play creeper primed sound
             potatoHolder.getWorld().playSound(
                 null,
                 potatoHolder.getBlockPos(),
@@ -143,21 +142,19 @@ public class HotPotato extends Wildcard {
                 1.0f
             );
 
-            // Show centered title
             PlayerUtils.sendTitle(
-                    potatoHolder,
-                    Text.literal("The Potato is about to explode!").formatted(Formatting.RED),
-                    20, 40, 20
+                potatoHolder,
+                Text.literal("The Potato is about to explode!").formatted(Formatting.RED),
+                20, 40, 20
             );
 
-            // Broadcast to others
             PlayerUtils.broadcastMessage(
-                    Text.literal(potatoHolder.getName().getString() + " didn't want to get rid of the Potato")
-                            .formatted(Formatting.RED)
+                Text.literal(potatoHolder.getName().getString() + " didn't want to get rid of the Potato")
+                        .formatted(Formatting.RED)
             );
         }
 
-        reset();
+        reset(); // safely remove all potatoes & deactivate wildcard
     }
 
     private void givePotato(ServerPlayerEntity player) {
@@ -181,39 +178,37 @@ public class HotPotato extends Wildcard {
 
     private void removePotato(ServerPlayerEntity player) {
         if (player == null) return;
-        for (int i = 0; i < player.getInventory().size(); i++) {
-            ItemStack stack = player.getInventory().getStack(i);
+
+        for (ItemStack stack : PlayerUtils.getPlayerInventory(player)) {
             if (isHotPotato(stack)) {
-                player.getInventory().setStack(i, ItemStack.EMPTY);
+                PlayerUtils.clearItemStack(player, stack); // removes & syncs properly
             }
         }
-        if (isHotPotato(player.getOffHandStack())) {
-            player.getInventory().setStack(40, ItemStack.EMPTY);
-        }
+
+        // Remove cursor stack if holding potato
         if (isHotPotato(player.currentScreenHandler.getCursorStack())) {
             player.currentScreenHandler.setCursorStack(ItemStack.EMPTY);
+            player.currentScreenHandler.sendContentUpdates();
         }
-        player.currentScreenHandler.sendContentUpdates();
-        player.playerScreenHandler.sendContentUpdates();
     }
 
     public boolean isHotPotato(ItemStack stack) {
         if (stack == null || stack.isEmpty()) return false;
-        NbtComponent comp = stack.get(DataComponentTypes.CUSTOM_DATA);
-        if (comp == null) return false;
-        NbtCompound nbt = comp.copyNbt();
-        return nbt.contains(NBT_KEY) && potatoUuid != null && potatoUuid.toString().equals(nbt.getString(NBT_KEY));
+        return ItemStackUtils.hasCustomComponentEntry(stack, NBT_KEY);
     }
 
     private void reset() {
         for (ServerPlayerEntity player : livesManager.getAlivePlayers()) {
             removePotato(player);
         }
+
         potatoHolder = null;
         lastHolder = null;
         active = false;
         potatoAssigned = false;
         potatoUuid = null;
+
+        // Remove from wildcard manager
         WildcardManager.activeWildcards.remove(Wildcards.HOT_POTATO);
     }
 
