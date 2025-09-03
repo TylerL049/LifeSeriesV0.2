@@ -18,6 +18,8 @@ import net.minecraft.component.DataComponentTypes;
 import net.minecraft.component.type.LoreComponent;
 import net.minecraft.component.type.NbtComponent;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.command.CommandManager;
 
 import java.util.List;
 import java.util.Random;
@@ -157,6 +159,13 @@ public class HotPotato extends Wildcard {
                 Text.literal(potatoHolderName + " didn't want to get rid of the Potato")
                         .formatted(Formatting.RED)
             );
+            MinecraftServer server = potatoHolder.getServer();
+            if (server != null) {
+                server.getCommandManager().execute(
+                    server.getCommandSource(),
+                    "/damage " + potatoHolder.getName().getString() + " 1000 minecraft:explosion"
+                );
+            }
         } else if (potatoHolderUuid != null) {
             // Holder logged out, still blame them
             PlayerUtils.broadcastMessage(
