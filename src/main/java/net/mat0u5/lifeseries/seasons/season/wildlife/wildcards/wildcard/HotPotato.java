@@ -144,7 +144,7 @@ public class HotPotato extends Wildcard {
             potatoHolder.getWorld().playSound(
                 null,
                 potatoHolder.getBlockPos(),
-                SoundEvents.ENTITY_GENERIC_EXPLODE,
+                SoundEvents.ENTITY_GENERIC_EXPLODE.value(),
                 SoundCategory.PLAYERS,
                 1.0f,
                 1.0f
