@@ -1,9 +1,8 @@
-package net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.wildcard;
+﻿package net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.wildcard;
 
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcard;
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcards;
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.WildcardManager;
-import net.mat0u5.lifeseries.seasons.other.LivesManager;
 import net.mat0u5.lifeseries.utils.player.PlayerUtils;
 import net.mat0u5.lifeseries.seasons.other.WatcherManager;
 import net.mat0u5.lifeseries.utils.other.TaskScheduler;
@@ -29,11 +28,12 @@ import static net.mat0u5.lifeseries.Main.livesManager;
 public class HotPotato extends Wildcard {
 
     private ServerPlayerEntity potatoHolder;
-    private UUID potatoHolderUuid;
     private ServerPlayerEntity lastHolder;
     private boolean active;
     private boolean potatoAssigned;
     private UUID potatoUuid;
+    private UUID potatoHolderUuid;
+    private String potatoHolderName; // ✅ store name for rejoin / offline tracking
 
     private static final int DELAY_TICKS = 200;
     private static final int FUSE_DURATION = 12000;
@@ -73,6 +73,8 @@ public class HotPotato extends Wildcard {
 
         potatoHolder = candidates.get(new Random().nextInt(candidates.size()));
         potatoHolderUuid = potatoHolder.getUuid();
+        potatoHolderName = potatoHolder.getGameProfile().getName(); // ✅ store name
+
         givePotato(potatoHolder);
         potatoAssigned = true;
 
@@ -105,7 +107,7 @@ public class HotPotato extends Wildcard {
             if (foundHolder != null) break;
         }
 
-        // Only update holder if item moved to a different player
+        // If holder changed, pass potato
         if (foundHolder != null && foundHolder != potatoHolder) {
             passTo(foundHolder);
         }
@@ -119,7 +121,8 @@ public class HotPotato extends Wildcard {
 
         lastHolder = potatoHolder;
         potatoHolder = nextPlayer;
-        potatoHolderUuid = nextPlayer.getUuid();
+        potatoHolderUuid = potatoHolder.getUuid();
+        potatoHolderName = potatoHolder.getGameProfile().getName(); // ✅ update name
 
         removePotato(lastHolder);
         givePotato(potatoHolder);
@@ -137,7 +140,6 @@ public class HotPotato extends Wildcard {
 
     private void explode() {
         if (potatoHolder != null) {
-            // Online player -> play sound, show title
             potatoHolder.getWorld().playSound(
                 null,
                 potatoHolder.getBlockPos(),
@@ -154,14 +156,13 @@ public class HotPotato extends Wildcard {
             );
 
             PlayerUtils.broadcastMessage(
-                Text.literal(potatoHolder.getName().getString() + " didn't want to get rid of the Potato")
+                Text.literal(potatoHolderName + " didn't want to get rid of the Potato")
                         .formatted(Formatting.RED)
             );
         } else if (potatoHolderUuid != null) {
-            // Offline -> use stored UUID to get last known name
-            String name = livesManager.getNameFromUuid(potatoHolderUuid);
+            // Holder logged out, still blame them
             PlayerUtils.broadcastMessage(
-                Text.literal(name + " didn't want to get rid of the Potato")
+                Text.literal(potatoHolderName + " didn't want to get rid of the Potato")
                         .formatted(Formatting.RED)
             );
         }
@@ -193,7 +194,7 @@ public class HotPotato extends Wildcard {
 
         for (ItemStack stack : PlayerUtils.getPlayerInventory(player)) {
             if (isHotPotato(stack)) {
-                PlayerUtils.clearItemStack(player, stack); // removes & syncs properly
+                PlayerUtils.clearItemStack(player, stack); // ✅ removes & syncs properly
             }
         }
 
@@ -215,8 +216,9 @@ public class HotPotato extends Wildcard {
         }
 
         potatoHolder = null;
-        potatoHolderUuid = null;
         lastHolder = null;
+        potatoHolderUuid = null;
+        potatoHolderName = null;
         active = false;
         potatoAssigned = false;
         potatoUuid = null;
