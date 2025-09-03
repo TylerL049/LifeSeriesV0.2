@@ -1,7 +1,7 @@
 package net.mat0u5.lifeseries.seasons.season.wildlife.wildcards;
 
 import net.minecraft.registry.Registry;
-import net.minecraft.registry.RegistryEntry;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffectInstance;
 
