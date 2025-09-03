@@ -124,8 +124,6 @@ public class HotPotato extends Wildcard {
         potatoHolderUuid = potatoHolder.getUuid();
         potatoHolderName = potatoHolder.getGameProfile().getName(); // ✅ update name
 
-        removePotato(lastHolder);
-        givePotato(potatoHolder);
 
         potatoHolder.sendMessage(
             Text.literal("You have the Hot Potato! It will explode during this session. Don't be the last player holding it.")
