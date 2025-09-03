@@ -84,10 +84,6 @@ public class HotPotato extends Wildcard {
         // Schedule fuse countdown
         TaskScheduler.scheduleTask(FUSE_DURATION, this::explode);
     }
-
-    /**
-     * Self-rescheduling inventory check for the Hot Potato.
-     */
     private void checkPotatoHolder() {
         if (!active || potatoUuid == null) return;
 
@@ -104,26 +100,15 @@ public class HotPotato extends Wildcard {
             if (foundHolder != null) break;
         }
 
-        // Update holder if it changed
+        // If holder changed, run proper pass logic
         if (foundHolder != null && foundHolder != potatoHolder) {
-            lastHolder = potatoHolder;
-            potatoHolder = foundHolder;
-
-            potatoHolder.sendMessage(
-                Text.literal("You now have the Hot Potato! It will explode during this session. Don't be the last player holding it.")
-                    .formatted(Formatting.AQUA)
-            );
-
-            PlayerUtils.sendTitle(
-                potatoHolder,
-                Text.literal("You have the Hot Potato!").formatted(Formatting.RED),
-                20, 40, 20
-            );
+            passTo(foundHolder);
         }
 
         // Reschedule itself
         TaskScheduler.scheduleTask(CHECK_INTERVAL, this::checkPotatoHolder);
     }
+
 
     public void passTo(ServerPlayerEntity nextPlayer) {
         if (!active || !potatoAssigned || nextPlayer == null || nextPlayer == potatoHolder) return;
@@ -214,6 +199,9 @@ public class HotPotato extends Wildcard {
     }
 
     private void reset() {
+        for (ServerPlayerEntity player : livesManager.getAlivePlayers()) {
+            removePotato(player);
+        }
         potatoHolder = null;
         lastHolder = null;
         active = false;
