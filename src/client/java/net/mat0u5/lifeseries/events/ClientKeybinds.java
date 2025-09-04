@@ -25,7 +25,7 @@ public class ClientKeybinds {
                 //? if <= 1.21.5 {
                 GLFW.GLFW_KEY_G,
                 //?} else {
-                /*GLFW.GLFW_KEY_R,
+                /*GLFW.GLFW_KEY_P,
                  *///?}
                 "key.categories.lifeseries"));
         if (VersionControl.isDevVersion()) {
