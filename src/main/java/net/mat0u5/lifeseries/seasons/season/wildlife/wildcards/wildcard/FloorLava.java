@@ -11,6 +11,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.particle.ParticleTypes;
+import static net.mat0u5.lifeseries.Main.server;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.text.Text;
@@ -65,10 +66,11 @@ public class FloorLava extends Wildcard {
 
     @Override
     public void activate() {
+        System.out.println("FloorLava.activate() called at tick " + (server != null ? server.getTicks() : "unknown") + " - CONSOLE DEBUG");
         this.active = true;
         this.tickCounter = 0;
         this.lastEffectTick.clear();
-        
+    
         // Send activation message to all players for debugging
         List<ServerPlayerEntity> players = PlayerUtils.getAllFunctioningPlayers();
         if (players != null) {
