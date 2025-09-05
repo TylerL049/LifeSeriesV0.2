@@ -10,7 +10,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.particle.ParticleTypes;
-import net.minecraft.tag.TagKey;
+import net.minecraft.registry.tag.TagKey;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.Registry;
 import net.minecraft.util.Identifier;
@@ -66,7 +66,7 @@ public class FloorIsLava extends Wildcard {
     private void applyWither(ServerPlayerEntity player) {
         StatusEffectInstance wither = new StatusEffectInstance(
                 StatusEffects.WITHER,
-                5,      // 5 ticks = 0.25s, refreshes each tick
+                5,  // 5 ticks = 0.25s, refreshes each tick
                 1,
                 true,   // show particles
                 true,   // show icon
