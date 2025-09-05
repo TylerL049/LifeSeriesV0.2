@@ -52,18 +52,22 @@ public class FloorIsLava extends Wildcard {
     public void tick() {
         if (!active) return;
 
-        // Iterate over all active players
+        // Check all active players
         List<ServerPlayerEntity> players = PlayerUtils.getAllFunctioningPlayers();
         for (ServerPlayerEntity player : players) {
             if (player.isSpectator()) continue;
 
-            // Get the block the player is standing on
-            BlockPos posBelow = new BlockPos(player.getX(), player.getY() - 0.1, player.getZ());
+            // Block under player's feet (round down to get block)
+            BlockPos posBelow = new BlockPos(
+                    Math.floor(player.getX()),
+                    Math.floor(player.getY() - 0.1),
+                    Math.floor(player.getZ())
+            );
             World world = player.getWorld();
             Block blockBelow = world.getBlockState(posBelow).getBlock();
 
             if (NATURAL_BLOCKS.contains(blockBelow)) {
-                // Apply Wither effect (1 second duration, amplifier 0)
+                // Apply Wither effect for slow damage
                 StatusEffectInstance wither = new StatusEffectInstance(
                         StatusEffects.WITHER, TICKS_PER_SECOND, 0, false, false, false
                 );
