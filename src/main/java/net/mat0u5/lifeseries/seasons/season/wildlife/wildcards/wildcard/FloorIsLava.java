@@ -9,7 +9,8 @@ import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.particle.ParticleTypes;
 
 import java.util.List;
 import java.util.Set;
@@ -52,26 +53,38 @@ public class FloorIsLava extends Wildcard {
     public void tick() {
         if (!active) return;
 
-        // Check all active players
+        // Get all active players
         List<ServerPlayerEntity> players = PlayerUtils.getAllFunctioningPlayers();
         for (ServerPlayerEntity player : players) {
             if (player.isSpectator()) continue;
 
-            // Block under player's feet (round down to get block)
-            BlockPos posBelow = new BlockPos(
-                (int) Math.floor(player.getX()),
-                (int) Math.floor(player.getY() - 0.1),
-                (int) Math.floor(player.getZ())
-            );
-            World world = player.getWorld();
-            Block blockBelow = world.getBlockState(posBelow).getBlock();
+            // Get the block directly under the player's feet
+            BlockPos posBelow = player.getBlockPos().down();
+            Block blockBelow = player.getWorld().getBlockState(posBelow).getBlock();
 
             if (NATURAL_BLOCKS.contains(blockBelow)) {
-                // Apply Wither effect for slow damage
+                // Apply Wither effect: 2 seconds, amplifier 1, particles visible
                 StatusEffectInstance wither = new StatusEffectInstance(
-                        StatusEffects.WITHER, TICKS_PER_SECOND, 0, false, false, false
+                        StatusEffects.WITHER,
+                        2 * TICKS_PER_SECOND,
+                        1,
+                        true,   // show particles
+                        true,   // show icon
+                        true    // ambient effect
                 );
                 player.addStatusEffect(wither);
+
+                // Optional: spawn purple portal particles to indicate danger
+                if (player.getWorld() instanceof ServerWorld serverWorld) {
+                    serverWorld.spawnParticles(
+                            ParticleTypes.PORTAL,
+                            player.getX(),
+                            player.getY() + 0.5,
+                            player.getZ(),
+                            10,   // count
+                            0.3, 0.5, 0.3, 0.05
+                    );
+                }
             }
         }
     }
