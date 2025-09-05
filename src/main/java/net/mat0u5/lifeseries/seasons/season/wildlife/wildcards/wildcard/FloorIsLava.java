@@ -20,7 +20,7 @@ public class FloorIsLava extends Wildcard {
     private boolean active = false;
     private static final int TICKS_PER_SECOND = 20;
 
-    // Use a static set instead of a TagKey
+    // Hardcoded “natural blocks” to check
     private static final Set<Block> NATURAL_BLOCKS = Set.of(
             Blocks.GRASS_BLOCK,
             Blocks.DIRT,
@@ -57,39 +57,38 @@ public class FloorIsLava extends Wildcard {
         for (ServerPlayerEntity player : players) {
             if (player.isSpectator()) continue;
 
-            BlockPos posBelow = player.getBlockPos().down(); // simple and works fine
+            // Get integer coordinates for the block directly below the player
+            int x = player.getBlockX();
+            int y = player.getBlockY() - 1; // Y-1
+            int z = player.getBlockZ();
+
+            BlockPos posBelow = new BlockPos(x, y, z);
             Block blockBelow = player.getWorld().getBlockState(posBelow).getBlock();
 
             if (NATURAL_BLOCKS.contains(blockBelow)) {
-                applyWither(player);
-                spawnLavaParticles(player);
+                // Apply Wither for 2 seconds
+                player.addStatusEffect(new StatusEffectInstance(
+                        StatusEffects.WITHER,
+                        2 * TICKS_PER_SECOND,
+                        1,
+                        true,
+                        true,
+                        true
+                ));
+
+                // Spawn portal particles above player
+                if (player.getWorld() instanceof ServerWorld serverWorld) {
+                    serverWorld.spawnParticles(
+                            ParticleTypes.PORTAL,
+                            player.getX(),
+                            player.getY() + 0.5,
+                            player.getZ(),
+                            10,
+                            0.3, 0.5, 0.3,
+                            0.05
+                    );
+                }
             }
-        }
-    }
-
-    private void applyWither(ServerPlayerEntity player) {
-        StatusEffectInstance wither = new StatusEffectInstance(
-                StatusEffects.WITHER,
-                2 * TICKS_PER_SECOND, // 2 seconds
-                1,
-                true,  // show particles
-                true,  // show icon
-                true   // ambient
-        );
-        player.addStatusEffect(wither);
-    }
-
-    private void spawnLavaParticles(ServerPlayerEntity player) {
-        if (player.getWorld() instanceof ServerWorld serverWorld) {
-            serverWorld.spawnParticles(
-                    ParticleTypes.PORTAL,
-                    player.getX(),
-                    player.getY() + 0.5,
-                    player.getZ(),
-                    10,
-                    0.3, 0.5, 0.3,
-                    0.05
-            );
         }
     }
 }
