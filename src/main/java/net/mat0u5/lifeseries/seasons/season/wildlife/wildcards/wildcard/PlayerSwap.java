@@ -16,6 +16,7 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
+import net.minecraft.server.world.ServerWorld;
 
 import java.util.List;
 import java.util.Random;
@@ -178,7 +179,7 @@ public class PlayerSwap extends Wildcard {
     /** Teleport particles & sound */
     private void playTeleportEffects(ServerPlayerEntity entity, double fromX, double fromY, double fromZ,
                                      double toX, double toY, double toZ) {
-        var world = entity.getWorld();
+        ServerWorld world = (ServerWorld) entity.getWorld();
 
         // Portal particles at both positions
         world.spawnParticles(ParticleTypes.PORTAL, fromX, fromY + 1, fromZ, 30, 0.5, 1, 0.5, 0.1);
