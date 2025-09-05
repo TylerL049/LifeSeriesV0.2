@@ -57,11 +57,12 @@ public class PlayerSwap extends Wildcard {
 
             int minDelay, maxDelay;
 
+            // First hour: gradually decreasing 6-10 min ? 2-6 min
             if (tickCounter < 60 * 60 * TICKS_PER_SECOND) {
                 double progress = (double) tickCounter / (60 * 60 * TICKS_PER_SECOND);
                 minDelay = (int) lerp(6 * 60 * TICKS_PER_SECOND, 2 * 60 * TICKS_PER_SECOND, progress);
                 maxDelay = (int) lerp(10 * 60 * TICKS_PER_SECOND, 6 * 60 * TICKS_PER_SECOND, progress);
-            } else {
+            } else { // Second hour and beyond: 2-6 min
                 minDelay = 2 * 60 * TICKS_PER_SECOND;
                 maxDelay = 6 * 60 * TICKS_PER_SECOND;
             }
@@ -110,20 +111,14 @@ public class PlayerSwap extends Wildcard {
         if (executor == null) return;
 
         var source = executor.getCommandSource();
-
-        // Play effects at original positions
-        playTeleportEffects(p1.getWorld(), p1X, p1Y, p1Z);
-        playTeleportEffects(p2.getWorld(), p2X, p2Y, p2Z);
-
-        // Execute command-based teleport
         executor.getServer().getCommandManager().executeWithPrefix(source,
                 "tp " + p1.getName().getString() + " " + p2X + " " + p2Y + " " + p2Z);
         executor.getServer().getCommandManager().executeWithPrefix(source,
                 "tp " + p2.getName().getString() + " " + p1X + " " + p1Y + " " + p1Z);
 
-        // Play effects at destination positions
-        playTeleportEffects(p1.getWorld(), p2X, p2Y, p2Z);
-        playTeleportEffects(p2.getWorld(), p1X, p1Y, p1Z);
+        // Play teleport effects at the **final location**
+        playTeleportEffects((ServerWorld) p1.getWorld(), p2X, p2Y, p2Z);
+        playTeleportEffects((ServerWorld) p2.getWorld(), p1X, p1Y, p1Z);
 
         applyNegativeEffects(p1);
         applyNegativeEffects(p2);
@@ -142,20 +137,14 @@ public class PlayerSwap extends Wildcard {
         if (executor == null) return;
 
         var source = executor.getCommandSource();
-
-        // Play effects at original positions
-        playTeleportEffects(player.getWorld(), playerX, playerY, playerZ);
-        playTeleportEffects(mob.getWorld(), mobX, mobY, mobZ);
-
-        // Command-based teleport
         executor.getServer().getCommandManager().executeWithPrefix(source,
                 "tp " + player.getName().getString() + " " + mobX + " " + mobY + " " + mobZ);
         executor.getServer().getCommandManager().executeWithPrefix(source,
                 "tp " + mob.getUuidAsString() + " " + playerX + " " + playerY + " " + playerZ);
 
-        // Play effects at destination positions
-        playTeleportEffects(player.getWorld(), mobX, mobY, mobZ);
-        playTeleportEffects(mob.getWorld(), playerX, playerY, playerZ);
+        // Play teleport effects at **final locations**
+        playTeleportEffects((ServerWorld) player.getWorld(), mobX, mobY, mobZ);
+        playTeleportEffects((ServerWorld) mob.getWorld(), playerX, playerY, playerZ);
 
         applyNegativeEffects(player);
     }
@@ -190,10 +179,11 @@ public class PlayerSwap extends Wildcard {
         player.addStatusEffect(effects[second]);
     }
 
+    /** Play teleport particles & sound at a location */
     private void playTeleportEffects(ServerWorld world, double x, double y, double z) {
-        // Portal particles
+        if (world == null) return;
+
         world.spawnParticles(ParticleTypes.PORTAL, x, y + 1, z, 30, 0.5, 1, 0.5, 0.1);
-        // Enderman teleport sound
         world.playSound(null, x, y, z, SoundEvents.ENTITY_ENDERMAN_TELEPORT,
                 SoundCategory.PLAYERS, 1.0F, 1.0F);
     }
@@ -205,6 +195,7 @@ public class PlayerSwap extends Wildcard {
         this.nextSwapTick = -1;
     }
 
+    /** Command registration */
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher,
                                 CommandRegistryAccess registryAccess,
                                 CommandManager.RegistrationEnvironment environment,
