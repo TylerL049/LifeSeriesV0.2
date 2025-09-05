@@ -147,17 +147,19 @@ public class PlayerSwap extends Wildcard {
             return; // Unknown entity type
         }
 
+                        // Play teleport effects at the old location
+        playTeleportEffects(entity);
+
+
         // Perform teleport
         executor.getServer().getCommandManager().executeWithPrefix(
                 executor.getCommandSource(),
                 "tp " + target + " " + newX + " " + newY + " " + newZ
         );
 
-                // Play teleport effects at the old location
-        playTeleportEffects(world, oldX, oldY, oldZ);
 
         // Play teleport effects at the new location
-        playTeleportEffects(world, newX, newY, newZ);
+        playTeleportEffects(entity);
     }
 
     private MobEntity getNearestMob(ServerPlayerEntity player, double radius) {
@@ -191,20 +193,23 @@ public class PlayerSwap extends Wildcard {
     }
 
     /** Play teleport particles & sound at a location */
-    private void playTeleportEffects(ServerWorld world, double x, double y, double z) {
-        if (world == null) return;
-
-        // Spawn particles at the location
-        world.spawnParticles(ParticleTypes.PORTAL, x, y + 1, z, 30, 0.5, 1, 0.5, 0.1);
-
-        // Play sound for nearby players only
-        world.playSound(
-                null, // null = all players near the position
-                x, y, z,
-                SoundEvents.ENTITY_ENDERMAN_TELEPORT,
-                SoundCategory.PLAYERS,
-                1.0F, 1.0F
-        );
+    private void playTeleportEffects(Object entity) {
+        if (entity instanceof ServerPlayerEntity player) {
+            ServerWorld world = (ServerWorld) player.getWorld();
+            double x = player.getX();
+            double y = player.getY();
+            double z = player.getZ();
+            world.spawnParticles(ParticleTypes.PORTAL, x, y + 1, z, 30, 0.5, 1, 0.5, 0.1);
+            player.playSound(SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1.0F, 1.0F);
+        } else if (entity instanceof MobEntity mob) {
+            ServerWorld world = (ServerWorld) mob.getWorld();
+            double x = mob.getX();
+            double y = mob.getY();
+            double z = mob.getZ();
+            world.spawnParticles(ParticleTypes.PORTAL, x, y + 1, z, 30, 0.5, 1, 0.5, 0.1);
+            // optional: play sound to nearby players
+            world.playSound(null, x, y, z, SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1.0F, 1.0F);
+        }
     }
 
     @Override
