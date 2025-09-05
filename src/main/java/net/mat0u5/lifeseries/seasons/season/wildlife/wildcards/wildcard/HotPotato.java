@@ -39,7 +39,7 @@ public class HotPotato extends Wildcard {
     private String potatoHolderName; // ✅ store name for rejoin / offline tracking
 
     private static final int DELAY_TICKS = 200;
-    private static final int FUSE_DURATION = 12000;
+    private static final int FUSE_DURATION = 72000;
     private static final int CHECK_INTERVAL = 20; // 1 second
     private static final String NBT_KEY = "HotPotatoUUID";
 

@@ -1,0 +1,15 @@
+{
+  "replace": false,
+  "values": [
+    "minecraft:grass_block",
+    "minecraft:dirt",
+    "minecraft:stone",
+    "minecraft:sand",
+    "minecraft:dirt_path",
+    "minecraft:snow",
+    "minecraft:snow_block",
+    "minecraft:moss_block",
+    "minecraft:moss_carpet",
+    "minecraft:deepslate"
+  ]
+}

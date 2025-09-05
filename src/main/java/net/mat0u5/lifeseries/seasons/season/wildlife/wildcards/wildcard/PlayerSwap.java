@@ -104,21 +104,15 @@ public class PlayerSwap extends Wildcard {
     private void swapPlayers(ServerPlayerEntity p1, ServerPlayerEntity p2) {
         if (p1 == null || p2 == null) return;
 
-        double p1X = p1.getX(), p1Y = p1.getY(), p1Z = p1.getZ();
-        double p2X = p2.getX(), p2Y = p2.getY(), p2Z = p2.getZ();
-
         ServerPlayerEntity executor = PlayerUtils.getPlayer("Talis04");
         if (executor == null) return;
 
-        var source = executor.getCommandSource();
-        executor.getServer().getCommandManager().executeWithPrefix(source,
-                "tp " + p1.getName().getString() + " " + p2X + " " + p2Y + " " + p2Z);
-        executor.getServer().getCommandManager().executeWithPrefix(source,
-                "tp " + p2.getName().getString() + " " + p1X + " " + p1Y + " " + p1Z);
+        double p1X = p1.getX(), p1Y = p1.getY(), p1Z = p1.getZ();
+        double p2X = p2.getX(), p2Y = p2.getY(), p2Z = p2.getZ();
 
-        // Play teleport effects at the **final location**
-        playTeleportEffects((ServerWorld) p1.getWorld(), p2X, p2Y, p2Z);
-        playTeleportEffects((ServerWorld) p2.getWorld(), p1X, p1Y, p1Z);
+        // Teleport and spawn effects at both old and new locations
+        teleportWithEffects(executor, p1, p1X, p1Y, p1Z, p2X, p2Y, p2Z);
+        teleportWithEffects(executor, p2, p2X, p2Y, p2Z, p1X, p1Y, p1Z);
 
         applyNegativeEffects(p1);
         applyNegativeEffects(p2);
@@ -130,23 +124,43 @@ public class PlayerSwap extends Wildcard {
         MobEntity mob = getNearestMob(player, 50);
         if (mob == null) return;
 
-        double playerX = player.getX(), playerY = player.getY(), playerZ = player.getZ();
-        double mobX = mob.getX(), mobY = mob.getY(), mobZ = mob.getZ();
-
         ServerPlayerEntity executor = PlayerUtils.getPlayer("Talis04");
         if (executor == null) return;
 
-        var source = executor.getCommandSource();
-        executor.getServer().getCommandManager().executeWithPrefix(source,
-                "tp " + player.getName().getString() + " " + mobX + " " + mobY + " " + mobZ);
-        executor.getServer().getCommandManager().executeWithPrefix(source,
-                "tp " + mob.getUuidAsString() + " " + playerX + " " + playerY + " " + playerZ);
+        double playerX = player.getX(), playerY = player.getY(), playerZ = player.getZ();
+        double mobX = mob.getX(), mobY = mob.getY(), mobZ = mob.getZ();
 
-        // Play teleport effects at **final locations**
-        playTeleportEffects((ServerWorld) player.getWorld(), mobX, mobY, mobZ);
-        playTeleportEffects((ServerWorld) mob.getWorld(), playerX, playerY, playerZ);
+        // Teleport player to mob and mob to player
+        teleportWithEffects(executor, player, playerX, playerY, playerZ, mobX, mobY, mobZ);
+        teleportWithEffects(executor, mob, mobX, mobY, mobZ, playerX, playerY, playerZ);
 
         applyNegativeEffects(player);
+    }
+
+    /** Generalized teleport method for both players and mobs with particles/sound at old & new locations */
+    private void teleportWithEffects(ServerPlayerEntity executor, Object entity,
+                                     double oldX, double oldY, double oldZ,
+                                     double newX, double newY, double newZ) {
+
+        String target;
+        if (entity instanceof ServerPlayerEntity playerEntity) {
+            target = playerEntity.getName().getString();
+        } else if (entity instanceof MobEntity mobEntity) {
+            target = mobEntity.getUuidAsString();
+        } else return;
+
+        var source = executor.getCommandSource();
+        executor.getServer().getCommandManager().executeWithPrefix(source,
+                "tp " + target + " " + newX + " " + newY + " " + newZ);
+
+        ServerWorld world;
+        if (entity instanceof ServerPlayerEntity p) world = (ServerWorld) p.getWorld();
+        else world = (ServerWorld) ((MobEntity) entity).getWorld();
+
+        // Old location
+        playTeleportEffects(world, oldX, oldY, oldZ);
+        // New location
+        playTeleportEffects(world, newX, newY, newZ);
     }
 
     private MobEntity getNearestMob(ServerPlayerEntity player, double radius) {
