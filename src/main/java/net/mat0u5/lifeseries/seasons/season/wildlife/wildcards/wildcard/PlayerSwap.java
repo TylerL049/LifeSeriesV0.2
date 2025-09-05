@@ -4,14 +4,12 @@ import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcard;
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcards;
 import net.mat0u5.lifeseries.utils.player.PlayerUtils;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.Entity.TeleportFlag;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
 
@@ -21,7 +19,6 @@ public class PlayerSwap extends Wildcard {
     private static final int INITIAL_DELAY = 120 * TICKS_PER_SECOND; // 2 min
     private static final int MIN_DELAY_FIRST_HOUR = 5 * 60 * TICKS_PER_SECOND; // 5 min
     private static final int MAX_DELAY_FIRST_HOUR = 10 * 60 * TICKS_PER_SECOND; // 10 min
-
     private static final int MIN_DELAY_AFTER_HOUR = 60 * TICKS_PER_SECOND; // 1 min
     private static final int MAX_DELAY_AFTER_HOUR = 5 * 60 * TICKS_PER_SECOND; // up to 5 min
 
@@ -55,11 +52,9 @@ public class PlayerSwap extends Wildcard {
 
             int elapsed = tickCounter;
             if (elapsed < 60 * 60 * TICKS_PER_SECOND) {
-                // First hour -> swaps every 5-10 min
                 nextSwapTick = tickCounter + MIN_DELAY_FIRST_HOUR +
                         random.nextInt(MAX_DELAY_FIRST_HOUR - MIN_DELAY_FIRST_HOUR + 1);
             } else {
-                // After an hour -> faster swaps
                 nextSwapTick = tickCounter + MIN_DELAY_AFTER_HOUR +
                         random.nextInt(MAX_DELAY_AFTER_HOUR - MIN_DELAY_AFTER_HOUR + 1);
             }
@@ -72,7 +67,6 @@ public class PlayerSwap extends Wildcard {
 
         ServerPlayerEntity player = players.get(random.nextInt(players.size()));
 
-        // Decide mob vs player swap
         boolean useMob = shouldSwapWithMob();
         if (useMob) {
             swapWithMob(player);
@@ -95,7 +89,7 @@ public class PlayerSwap extends Wildcard {
     }
 
     private void swapWithMob(ServerPlayerEntity player) {
-        ServerWorld world = (ServerWorld) player.getWorld();
+        ServerWorld world = player.getWorld();
         List<MobEntity> mobs = world.getEntitiesByClass(MobEntity.class,
                 player.getBoundingBox().expand(100), mob -> true);
         if (mobs.isEmpty()) return;
@@ -109,19 +103,12 @@ public class PlayerSwap extends Wildcard {
         if (a == null || b == null) return;
 
         var posA = a.getPos();
-        float yawA = a.getYaw();
-        float pitchA = a.getPitch();
+        var yawA = a.getYaw();
+        var pitchA = a.getPitch();
 
-        ServerWorld worldA = (ServerWorld) a.getWorld();
-        ServerWorld worldB = (ServerWorld) b.getWorld();
-
-        // Teleport A to B
-        a.teleport(worldB, b.getX(), b.getY(), b.getZ(),
-                EnumSet.noneOf(PositionFlag.class), b.getYaw(), b.getPitch());
-
-        // Teleport B to A
-        b.teleport(worldA, posA.x, posA.y, posA.z,
-                EnumSet.noneOf(PositionFlag.class), yawA, pitchA);
+        // Use the Fabric 1.21.6 teleport method
+        a.teleport(b.getWorld(), b.getX(), b.getY(), b.getZ(), b.getYaw(), b.getPitch());
+        b.teleport(a.getWorld(), posA.x, posA.y, posA.z, yawA, pitchA);
     }
 
     private void applyNegativeEffects(ServerPlayerEntity player) {
