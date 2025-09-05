@@ -59,6 +59,13 @@ public class ChooseWildcardScreen extends DefaultScreen {
                         .build()
         );
 
+        this.addDrawableChild(
+            ButtonWidget.builder(Text.literal("Floor is Lava"), btn -> selectWildcard("floor_is_lava"))
+                    .position(oneThirdX - 40, startY + 195)
+                    .size(80, 20)
+                    .build()
+    );
+
         /*
             Right column
          */

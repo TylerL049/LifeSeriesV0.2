@@ -34,6 +34,7 @@ public enum Wildcards {
         if (this == GRAVITY_MANIPULATION) return new GravityManipulation();
         if (this == HOT_POTATO) return new HotPotato();
         if (this == PLAYER_SWAP) return new PlayerSwap();
+        if (this == FLOOR_IS_LAVA) return new FloorIsLava();
         if (this == CALLBACK) return new Callback();
         return null;
     }

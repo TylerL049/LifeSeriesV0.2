@@ -89,6 +89,7 @@ public class WildcardManager {
         if (index == 7) activeWildcards.put(Wildcards.GRAVITY_MANIPULATION, new GravityManipulation());
         if (index == 8) activeWildcards.put(Wildcards.HOT_POTATO, new HotPotato());
         if (index == 9) activeWildcards.put(Wildcards.PLAYER_SWAP, new PlayerSwap());
+        if (index == 10) activeWildcards.put(Wildcards.FLOOR_IS_LAVA, new FloorIsLava());)
     }
 
     public static void onPlayerJoin(ServerPlayerEntity player) {
