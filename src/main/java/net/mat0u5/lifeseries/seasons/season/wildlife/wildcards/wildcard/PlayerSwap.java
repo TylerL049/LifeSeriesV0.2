@@ -194,9 +194,17 @@ public class PlayerSwap extends Wildcard {
     private void playTeleportEffects(ServerWorld world, double x, double y, double z) {
         if (world == null) return;
 
+        // Spawn particles at the location
         world.spawnParticles(ParticleTypes.PORTAL, x, y + 1, z, 30, 0.5, 1, 0.5, 0.1);
-        world.playSound(null, x, y, z, SoundEvents.ENTITY_ENDERMAN_TELEPORT,
-                SoundCategory.PLAYERS, 1.0F, 1.0F);
+
+        // Play sound for nearby players only
+        world.playSound(
+                null, // null = all players near the position
+                x, y, z,
+                SoundEvents.ENTITY_ENDERMAN_TELEPORT,
+                SoundCategory.PLAYERS,
+                1.0F, 1.0F
+        );
     }
 
     @Override

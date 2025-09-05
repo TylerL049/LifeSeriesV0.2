@@ -20,7 +20,6 @@ public class FloorIsLava extends Wildcard {
     private boolean active = false;
     private static final int TICKS_PER_SECOND = 20;
 
-    // Hardcoded “natural blocks” to check
     private static final Set<Block> NATURAL_BLOCKS = Set.of(
             Blocks.GRASS_BLOCK,
             Blocks.DIRT,
