@@ -12,6 +12,9 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
+import net.minecraft.particle.ParticleTypes;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 
 import java.util.List;
@@ -49,17 +52,16 @@ public class PlayerSwap extends Wildcard {
         tickCounter++;
 
         if (nextSwapTick > 0 && tickCounter >= nextSwapTick) {
-            // Perform swap
             doSwap(null);
 
-            // Determine next swap delay
             int minDelay, maxDelay;
 
-            if (tickCounter < 60 * 60 * TICKS_PER_SECOND) { // First hour
+            // First hour: gradually decreasing 6-10 min ? 2-6 min
+            if (tickCounter < 60 * 60 * TICKS_PER_SECOND) {
                 double progress = (double) tickCounter / (60 * 60 * TICKS_PER_SECOND);
                 minDelay = (int) lerp(6 * 60 * TICKS_PER_SECOND, 2 * 60 * TICKS_PER_SECOND, progress);
                 maxDelay = (int) lerp(10 * 60 * TICKS_PER_SECOND, 6 * 60 * TICKS_PER_SECOND, progress);
-            } else { // Second hour and beyond
+            } else { // Second hour and beyond: 2-6 min
                 minDelay = 2 * 60 * TICKS_PER_SECOND;
                 maxDelay = 6 * 60 * TICKS_PER_SECOND;
             }
@@ -68,12 +70,10 @@ public class PlayerSwap extends Wildcard {
         }
     }
 
-    // Linear interpolation helper
     private double lerp(double start, double end, double progress) {
         return start + (end - start) * progress;
     }
 
-    /** Main swap method */
     public void doSwap(String forceType) {
         List<ServerPlayerEntity> players = PlayerUtils.getAllFunctioningPlayers();
         if (players.isEmpty()) return;
@@ -95,13 +95,11 @@ public class PlayerSwap extends Wildcard {
         }
     }
 
-    /** Decide if the next swap should be with a mob */
     private boolean shouldSwapWithMob() {
         double chance = (tickCounter < 60 * 60 * TICKS_PER_SECOND) ? 0.30 : 0.40;
         return random.nextDouble() < chance;
     }
 
-    /** Swap two players */
     private void swapPlayers(ServerPlayerEntity p1, ServerPlayerEntity p2) {
         if (p1 == null || p2 == null) return;
 
@@ -117,11 +115,14 @@ public class PlayerSwap extends Wildcard {
         executor.getServer().getCommandManager().executeWithPrefix(source,
                 "tp " + p2.getName().getString() + " " + p1X + " " + p1Y + " " + p1Z);
 
+        // Play teleport effects
+        playTeleportEffects(p1, p1X, p1Y, p1Z, p2X, p2Y, p2Z);
+        playTeleportEffects(p2, p2X, p2Y, p2Z, p1X, p1Y, p1Z);
+
         applyNegativeEffects(p1);
         applyNegativeEffects(p2);
     }
 
-    /** Swap player with a nearby mob */
     private void swapWithMob(ServerPlayerEntity player) {
         if (player == null) return;
 
@@ -140,6 +141,7 @@ public class PlayerSwap extends Wildcard {
         executor.getServer().getCommandManager().executeWithPrefix(source,
                 "tp " + mob.getUuidAsString() + " " + playerX + " " + playerY + " " + playerZ);
 
+        playTeleportEffects(player, playerX, playerY, playerZ, mobX, mobY, mobZ);
         applyNegativeEffects(player);
     }
 
@@ -155,8 +157,7 @@ public class PlayerSwap extends Wildcard {
 
         int duration = 5 * TICKS_PER_SECOND;
 
-        // List of possible negative effects
-        StatusEffectInstance[] effects = new StatusEffectInstance[] {
+        StatusEffectInstance[] effects = new StatusEffectInstance[]{
                 new StatusEffectInstance(StatusEffects.NAUSEA, duration, 0, false, false, false),
                 new StatusEffectInstance(StatusEffects.SLOWNESS, duration, 1, false, false, false),
                 new StatusEffectInstance(StatusEffects.BLINDNESS, duration, 0, false, false, false),
@@ -164,18 +165,30 @@ public class PlayerSwap extends Wildcard {
                 new StatusEffectInstance(StatusEffects.POISON, duration, 0, false, false, false)
         };
 
-        Random random = new Random();
-
-        // Pick 2 distinct random indices
-        int firstIndex = random.nextInt(effects.length);
-        int secondIndex;
+        int first = random.nextInt(effects.length);
+        int second;
         do {
-            secondIndex = random.nextInt(effects.length);
-        } while (secondIndex == firstIndex);
+            second = random.nextInt(effects.length);
+        } while (second == first);
 
-        // Apply the two chosen effects
-        player.addStatusEffect(effects[firstIndex]);
-        player.addStatusEffect(effects[secondIndex]);
+        player.addStatusEffect(effects[first]);
+        player.addStatusEffect(effects[second]);
+    }
+
+    /** Teleport particles & sound */
+    private void playTeleportEffects(ServerPlayerEntity entity, double fromX, double fromY, double fromZ,
+                                     double toX, double toY, double toZ) {
+        var world = entity.getWorld();
+
+        // Portal particles at both positions
+        world.spawnParticles(ParticleTypes.PORTAL, fromX, fromY + 1, fromZ, 30, 0.5, 1, 0.5, 0.1);
+        world.spawnParticles(ParticleTypes.PORTAL, toX, toY + 1, toZ, 30, 0.5, 1, 0.5, 0.1);
+
+        // Enderman teleport sound at both positions
+        world.playSound(null, fromX, fromY, fromZ, SoundEvents.ENTITY_ENDERMAN_TELEPORT,
+                SoundCategory.PLAYERS, 1.0F, 1.0F);
+        world.playSound(null, toX, toY, toZ, SoundEvents.ENTITY_ENDERMAN_TELEPORT,
+                SoundCategory.PLAYERS, 1.0F, 1.0F);
     }
 
     @Override
@@ -185,7 +198,7 @@ public class PlayerSwap extends Wildcard {
         this.nextSwapTick = -1;
     }
 
-    /** Register /playerswap command */
+    /** Command registration */
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher,
                                 CommandRegistryAccess registryAccess,
                                 CommandManager.RegistrationEnvironment environment,
@@ -195,7 +208,7 @@ public class PlayerSwap extends Wildcard {
                 literal("playerswap")
                         .requires(source -> {
                             ServerPlayerEntity player = source.getPlayer();
-                            return player == null || isAdmin(player); // console or admin
+                            return player == null || isAdmin(player);
                         })
                         .then(literal("activateswap")
                                 .executes(context -> runSwapCommand(context, instance, null))
@@ -211,7 +224,6 @@ public class PlayerSwap extends Wildcard {
 
     private static int runSwapCommand(CommandContext<ServerCommandSource> context,
                                       PlayerSwap instance, String forceType) {
-
         ServerCommandSource source = context.getSource();
         ServerPlayerEntity executor = source.getPlayer();
 
