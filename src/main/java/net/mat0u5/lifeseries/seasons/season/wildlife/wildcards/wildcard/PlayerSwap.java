@@ -109,6 +109,7 @@ public class PlayerSwap extends Wildcard {
         // Use the Fabric 1.21.6 teleport method
         a.teleport(b.getWorld(), b.getX(), b.getY(), b.getZ(), b.getYaw(), b.getPitch());
         b.teleport(a.getWorld(), posA.x, posA.y, posA.z, yawA, pitchA);
+        //adding this to commit
     }
 
     private void applyNegativeEffects(ServerPlayerEntity player) {
