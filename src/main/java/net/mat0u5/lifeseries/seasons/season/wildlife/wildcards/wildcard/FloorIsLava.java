@@ -9,6 +9,7 @@ import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.World;
 
 import java.util.List;
 import java.util.Set;
@@ -18,7 +19,7 @@ public class FloorIsLava extends Wildcard {
     private boolean active = false;
     private static final int TICKS_PER_SECOND = 20;
 
-    // Blocks considered "natural" and unsafe
+    /** Blocks considered "natural" and unsafe */
     private static final Set<Block> NATURAL_BLOCKS = Set.of(
             Blocks.GRASS_BLOCK,
             Blocks.DIRT,
@@ -51,18 +52,22 @@ public class FloorIsLava extends Wildcard {
     public void tick() {
         if (!active) return;
 
-        // Check all active players
+        // Iterate over all active players
         List<ServerPlayerEntity> players = PlayerUtils.getAllFunctioningPlayers();
         for (ServerPlayerEntity player : players) {
             if (player.isSpectator()) continue;
 
-            BlockPos posBelow = player.getBlockPos().down(); // Block under the player's feet
-            Block blockBelow = player.getWorld().getBlockState(posBelow).getBlock();
+            // Get the block the player is standing on
+            BlockPos posBelow = new BlockPos(player.getX(), player.getY() - 0.1, player.getZ());
+            World world = player.getWorld();
+            Block blockBelow = world.getBlockState(posBelow).getBlock();
 
             if (NATURAL_BLOCKS.contains(blockBelow)) {
-                // Apply Wither effect for slow damage
-                StatusEffectInstance effect = new StatusEffectInstance(StatusEffects.WITHER, TICKS_PER_SECOND, 0, false, false, false);
-                player.addStatusEffect(effect);
+                // Apply Wither effect (1 second duration, amplifier 0)
+                StatusEffectInstance wither = new StatusEffectInstance(
+                        StatusEffects.WITHER, TICKS_PER_SECOND, 0, false, false, false
+                );
+                player.addStatusEffect(wither);
             }
         }
     }
