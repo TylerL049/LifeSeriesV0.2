@@ -1,25 +1,34 @@
 package net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.wildcard;
 
+import com.mojang.brigadier.Command;
+import com.mojang.brigadier.context.CommandContext;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcard;
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcards;
 import net.mat0u5.lifeseries.utils.player.PlayerUtils;
+import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.server.command.CommandManager;
+import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.Text;
 
 import java.util.List;
 import java.util.Random;
 
+import static net.minecraft.server.command.CommandManager.literal;
+
 public class PlayerSwap extends Wildcard {
 
     private static final int TICKS_PER_SECOND = 20;
-    private static final int INITIAL_DELAY = 120 * TICKS_PER_SECOND; // 2 minutes
-    private static final int MIN_DELAY_FIRST_HOUR = 5 * 60 * TICKS_PER_SECOND; // 5 minutes
-    private static final int MAX_DELAY_FIRST_HOUR = 10 * 60 * TICKS_PER_SECOND; // 10 minutes
-    private static final int MIN_DELAY_AFTER_HOUR = 60 * TICKS_PER_SECOND; // 1 minute
-    private static final int MAX_DELAY_AFTER_HOUR = 5 * 60 * TICKS_PER_SECOND; // 5 minutes
+    private static final int INITIAL_DELAY = 120 * TICKS_PER_SECOND; // 2 min
+    private static final int MIN_DELAY_FIRST_HOUR = 5 * 60 * TICKS_PER_SECOND; // 5 min
+    private static final int MAX_DELAY_FIRST_HOUR = 10 * 60 * TICKS_PER_SECOND; // 10 min
+    private static final int MIN_DELAY_AFTER_HOUR = 60 * TICKS_PER_SECOND; // 1 min
+    private static final int MAX_DELAY_AFTER_HOUR = 5 * 60 * TICKS_PER_SECOND; // 5 min
 
     private static final double MOB_SWAP_CHANCE_INITIAL = 0.20;
     private static final double MOB_SWAP_CHANCE_AFTER_HOUR = 0.35;
@@ -61,13 +70,27 @@ public class PlayerSwap extends Wildcard {
         }
     }
 
-    private void doSwap() {
+    /** Main swap logic */
+    public void doSwap() {
+        doSwap(null);
+    }
+
+    /** Overloaded swap logic with optional forced type: "players" or "mob" */
+    public void doSwap(String forceType) {
         List<ServerPlayerEntity> players = PlayerUtils.getAllFunctioningPlayers();
         if (players.size() < 1) return;
 
         ServerPlayerEntity player = players.get(random.nextInt(players.size()));
 
-        boolean useMob = shouldSwapWithMob();
+        boolean useMob;
+        if ("players".equalsIgnoreCase(forceType)) {
+            useMob = false;
+        } else if ("mob".equalsIgnoreCase(forceType)) {
+            useMob = true;
+        } else {
+            useMob = shouldSwapWithMob();
+        }
+
         if (useMob) {
             swapWithMob(player);
         } else if (players.size() > 1) {
@@ -86,6 +109,7 @@ public class PlayerSwap extends Wildcard {
         return random.nextDouble() < chance;
     }
 
+    /** Player ? Player swap using /tp via executor */
     private void swapPlayers(ServerPlayerEntity p1, ServerPlayerEntity p2) {
         if (p1 == null || p2 == null) return;
 
@@ -102,7 +126,6 @@ public class PlayerSwap extends Wildcard {
 
         var source = executor.getCommandSource();
 
-        // Swap player positions
         executor.getServer().getCommandManager().executeWithPrefix(
                 source,
                 "tp " + p1.getName().getString() + " " + p2X + " " + p2Y + " " + p2Z
@@ -112,15 +135,15 @@ public class PlayerSwap extends Wildcard {
                 "tp " + p2.getName().getString() + " " + p1X + " " + p1Y + " " + p1Z
         );
 
-        // Apply negative effects to both
         applyNegativeEffects(p1);
         applyNegativeEffects(p2);
     }
 
+    /** Player ? Mob swap using /tp via executor */
     private void swapWithMob(ServerPlayerEntity player) {
         if (player == null) return;
 
-        MobEntity mob = getNearestMob(player, 50); // Finds nearest mob
+        MobEntity mob = getNearestMob(player, 50);
         if (mob == null) return;
 
         double playerX = player.getX();
@@ -136,7 +159,7 @@ public class PlayerSwap extends Wildcard {
 
         var source = executor.getCommandSource();
 
-        // Swap player <-> mob positions
+        // Swap positions
         executor.getServer().getCommandManager().executeWithPrefix(
                 source,
                 "tp " + player.getName().getString() + " " + mobX + " " + mobY + " " + mobZ
@@ -146,7 +169,7 @@ public class PlayerSwap extends Wildcard {
                 "tp " + mob.getUuidAsString() + " " + playerX + " " + playerY + " " + playerZ
         );
 
-        // Only player gets negative effects
+        // Only the player gets negative effects
         applyNegativeEffects(player);
     }
 
@@ -177,5 +200,44 @@ public class PlayerSwap extends Wildcard {
         this.active = false;
         this.tickCounter = 0;
         this.nextSwapTick = -1;
+    }
+
+    /** Command registration for /playerswap activateswap */
+    public static void registerCommand(PlayerSwap instance) {
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+            dispatcher.register(
+                    literal("playerswap")
+                            .requires(source -> source.hasPermissionLevel(2))
+                            .then(literal("activateswap")
+                                    .executes(context -> runSwapCommand(context, instance))
+                                    .then(literal("players")
+                                            .executes(context -> runSwapCommand(context, instance, "players")))
+                                    .then(literal("mob")
+                                            .executes(context -> runSwapCommand(context, instance, "mob")))
+                            )
+            );
+        });
+    }
+
+    private static int runSwapCommand(CommandContext<ServerCommandSource> context, PlayerSwap instance) {
+        return runSwapCommand(context, instance, null);
+    }
+
+    private static int runSwapCommand(CommandContext<ServerCommandSource> context, PlayerSwap instance, String forceType) {
+        ServerPlayerEntity executor = context.getSource().getPlayer();
+        if (executor == null) return Command.SINGLE_SUCCESS;
+
+        if (!instance.active) {
+            executor.sendMessage(Text.literal("PlayerSwap is not active! Activate it first."), false);
+            return Command.SINGLE_SUCCESS;
+        }
+
+        instance.doSwap(forceType);
+
+        executor.sendMessage(Text.literal("PlayerSwap triggered manually."), false);
+        if (forceType != null) {
+            executor.sendMessage(Text.literal("Forced swap type: " + forceType), false);
+        }
+        return Command.SINGLE_SUCCESS;
     }
 }
