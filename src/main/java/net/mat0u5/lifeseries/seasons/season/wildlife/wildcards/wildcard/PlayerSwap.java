@@ -139,35 +139,45 @@ public class PlayerSwap extends Wildcard {
 
         if (entity instanceof ServerPlayerEntity playerEntity) {
             target = playerEntity.getName().getString();
+            ServerWorld world = (ServerWorld) playerEntity.getWorld();
 
-            // Old location effects
-            playParticlesAndSoundPlayer(playerEntity, oldX, oldY, oldZ);
+            // Play effects at OLD location BEFORE teleporting
+            playParticlesAndSoundAtLocation(world, oldX, oldY, oldZ);
 
-            // Teleport
+            // Teleport the player
             executor.getServer().getCommandManager().executeWithPrefix(
                     executor.getCommandSource(),
                     "tp " + target + " " + newX + " " + newY + " " + newZ
             );
 
-            // New location effects
-            playParticlesAndSoundPlayer(playerEntity, newX, newY, newZ);
+            // Play effects at NEW location AFTER teleporting
+            playParticlesAndSoundAtLocation(world, newX, newY, newZ);
 
         } else if (entity instanceof MobEntity mobEntity) {
             target = mobEntity.getUuidAsString();
             ServerWorld world = (ServerWorld) mobEntity.getWorld();
 
-            // Old location effects
-            playParticlesAndSoundMob(world, oldX, oldY, oldZ);
+            // Play effects at OLD location BEFORE teleporting
+            playParticlesAndSoundAtLocation(world, oldX, oldY, oldZ);
 
-            // Teleport
+            // Teleport the mob
             executor.getServer().getCommandManager().executeWithPrefix(
                     executor.getCommandSource(),
                     "tp " + target + " " + newX + " " + newY + " " + newZ
             );
 
-            // New location effects
-            playParticlesAndSoundMob(world, newX, newY, newZ);
+            // Play effects at NEW location AFTER teleporting
+            playParticlesAndSoundAtLocation(world, newX, newY, newZ);
         }
+    }
+
+    /** Unified method to play particles and sound at any location */
+    private void playParticlesAndSoundAtLocation(ServerWorld world, double x, double y, double z) {
+        // Spawn particles
+        world.spawnParticles(ParticleTypes.PORTAL, x, y + 1, z, 30, 0.5, 1, 0.5, 0.1);
+        
+        // Play sound that can be heard by nearby players
+        world.playSound(null, x, y, z, SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1.0F, 1.0F);
     }
 
     private MobEntity getNearestMob(ServerPlayerEntity player, double radius) {
@@ -198,19 +208,6 @@ public class PlayerSwap extends Wildcard {
 
         player.addStatusEffect(effects[first]);
         player.addStatusEffect(effects[second]);
-    }
-
-    /** Particles + sound for players (sound always heard by the player) */
-    private void playParticlesAndSoundPlayer(ServerPlayerEntity player, double x, double y, double z) {
-        ServerWorld world = (ServerWorld) player.getWorld();
-        world.spawnParticles(ParticleTypes.PORTAL, x, y + 1, z, 30, 0.5, 1, 0.5, 0.1);
-        player.playSound(SoundEvents.ENTITY_ENDERMAN_TELEPORT, 1.0F, 1.0F);
-    }
-
-    /** Particles + sound for mobs (sound heard by nearby players only) */
-    private void playParticlesAndSoundMob(ServerWorld world, double x, double y, double z) {
-        world.spawnParticles(ParticleTypes.PORTAL, x, y + 1, z, 30, 0.5, 1, 0.5, 0.1);
-        world.playSound(null, x, y, z, SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1.0F, 1.0F);
     }
 
     @Override
