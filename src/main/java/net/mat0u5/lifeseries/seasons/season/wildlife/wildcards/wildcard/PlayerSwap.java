@@ -4,12 +4,14 @@ import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcard;
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcards;
 import net.mat0u5.lifeseries.utils.player.PlayerUtils;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.PositionFlag;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Random;
 
@@ -57,7 +59,7 @@ public class PlayerSwap extends Wildcard {
                 nextSwapTick = tickCounter + MIN_DELAY_FIRST_HOUR +
                         random.nextInt(MAX_DELAY_FIRST_HOUR - MIN_DELAY_FIRST_HOUR + 1);
             } else {
-                // After an hour ? faster swaps
+                // After an hour -> faster swaps
                 nextSwapTick = tickCounter + MIN_DELAY_AFTER_HOUR +
                         random.nextInt(MAX_DELAY_AFTER_HOUR - MIN_DELAY_AFTER_HOUR + 1);
             }
@@ -93,7 +95,7 @@ public class PlayerSwap extends Wildcard {
     }
 
     private void swapWithMob(ServerPlayerEntity player) {
-        ServerWorld world = player.getServerWorld();
+        ServerWorld world = (ServerWorld) player.getWorld();
         List<MobEntity> mobs = world.getEntitiesByClass(MobEntity.class,
                 player.getBoundingBox().expand(100), mob -> true);
         if (mobs.isEmpty()) return;
@@ -107,11 +109,19 @@ public class PlayerSwap extends Wildcard {
         if (a == null || b == null) return;
 
         var posA = a.getPos();
-        var yawA = a.getYaw();
-        var pitchA = a.getPitch();
+        float yawA = a.getYaw();
+        float pitchA = a.getPitch();
 
-        a.teleport(b.getServerWorld(), b.getX(), b.getY(), b.getZ(), b.getYaw(), b.getPitch());
-        b.teleport(a.getServerWorld(), posA.x, posA.y, posA.z, yawA, pitchA);
+        ServerWorld worldA = (ServerWorld) a.getWorld();
+        ServerWorld worldB = (ServerWorld) b.getWorld();
+
+        // Teleport A to B
+        a.teleport(worldB, b.getX(), b.getY(), b.getZ(),
+                EnumSet.noneOf(PositionFlag.class), b.getYaw(), b.getPitch());
+
+        // Teleport B to A
+        b.teleport(worldA, posA.x, posA.y, posA.z,
+                EnumSet.noneOf(PositionFlag.class), yawA, pitchA);
     }
 
     private void applyNegativeEffects(ServerPlayerEntity player) {
