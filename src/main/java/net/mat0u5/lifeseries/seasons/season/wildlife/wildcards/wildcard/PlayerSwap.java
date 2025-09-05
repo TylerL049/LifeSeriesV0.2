@@ -18,20 +18,12 @@ import java.util.List;
 import java.util.Random;
 
 import static net.mat0u5.lifeseries.utils.player.PermissionManager.isAdmin;
-import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 
 public class PlayerSwap extends Wildcard {
 
     private static final int TICKS_PER_SECOND = 20;
     private static final int INITIAL_DELAY = 120 * TICKS_PER_SECOND;
-    private static final int MIN_DELAY_FIRST_HOUR = 5 * 60 * TICKS_PER_SECOND;
-    private static final int MAX_DELAY_FIRST_HOUR = 10 * 60 * TICKS_PER_SECOND;
-    private static final int MIN_DELAY_AFTER_HOUR = 60 * TICKS_PER_SECOND;
-    private static final int MAX_DELAY_AFTER_HOUR = 5 * 60 * TICKS_PER_SECOND;
-
-    private static final double MOB_SWAP_CHANCE_INITIAL = 0.20;
-    private static final double MOB_SWAP_CHANCE_AFTER_HOUR = 0.35;
 
     private final Random random = new Random();
     private int tickCounter = 0;
@@ -55,18 +47,30 @@ public class PlayerSwap extends Wildcard {
         if (!active) return;
 
         tickCounter++;
+
         if (nextSwapTick > 0 && tickCounter >= nextSwapTick) {
+            // Perform swap
             doSwap(null);
 
-            int elapsed = tickCounter;
-            if (elapsed < 60 * 60 * TICKS_PER_SECOND) {
-                nextSwapTick = tickCounter + MIN_DELAY_FIRST_HOUR +
-                        random.nextInt(MAX_DELAY_FIRST_HOUR - MIN_DELAY_FIRST_HOUR + 1);
-            } else {
-                nextSwapTick = tickCounter + MIN_DELAY_AFTER_HOUR +
-                        random.nextInt(MAX_DELAY_AFTER_HOUR - MIN_DELAY_AFTER_HOUR + 1);
+            // Determine next swap delay
+            int minDelay, maxDelay;
+
+            if (tickCounter < 60 * 60 * TICKS_PER_SECOND) { // First hour
+                double progress = (double) tickCounter / (60 * 60 * TICKS_PER_SECOND);
+                minDelay = (int) lerp(6 * 60 * TICKS_PER_SECOND, 2 * 60 * TICKS_PER_SECOND, progress);
+                maxDelay = (int) lerp(10 * 60 * TICKS_PER_SECOND, 6 * 60 * TICKS_PER_SECOND, progress);
+            } else { // Second hour and beyond
+                minDelay = 2 * 60 * TICKS_PER_SECOND;
+                maxDelay = 6 * 60 * TICKS_PER_SECOND;
             }
+
+            nextSwapTick = tickCounter + minDelay + random.nextInt(maxDelay - minDelay + 1);
         }
+    }
+
+    // Linear interpolation helper
+    private double lerp(double start, double end, double progress) {
+        return start + (end - start) * progress;
     }
 
     /** Main swap method */
@@ -91,13 +95,13 @@ public class PlayerSwap extends Wildcard {
         }
     }
 
+    /** Decide if the next swap should be with a mob */
     private boolean shouldSwapWithMob() {
-        double chance = (tickCounter < 60 * 60 * TICKS_PER_SECOND)
-                ? MOB_SWAP_CHANCE_INITIAL
-                : MOB_SWAP_CHANCE_AFTER_HOUR;
+        double chance = (tickCounter < 60 * 60 * TICKS_PER_SECOND) ? 0.30 : 0.40;
         return random.nextDouble() < chance;
     }
 
+    /** Swap two players */
     private void swapPlayers(ServerPlayerEntity p1, ServerPlayerEntity p2) {
         if (p1 == null || p2 == null) return;
 
@@ -117,6 +121,7 @@ public class PlayerSwap extends Wildcard {
         applyNegativeEffects(p2);
     }
 
+    /** Swap player with a nearby mob */
     private void swapWithMob(ServerPlayerEntity player) {
         if (player == null) return;
 
@@ -149,11 +154,28 @@ public class PlayerSwap extends Wildcard {
         if (player == null || player.isSpectator()) return;
 
         int duration = 5 * TICKS_PER_SECOND;
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.NAUSEA, duration, 0, false, false, false));
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, duration, 1, false, false, false));
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.BLINDNESS, duration, 0, false, false, false));
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.DARKNESS, duration, 0, false, false, false));
-        player.addStatusEffect(new StatusEffectInstance(StatusEffects.POISON, duration, 0, false, false, false));
+
+        // List of possible negative effects
+        StatusEffectInstance[] effects = new StatusEffectInstance[] {
+                new StatusEffectInstance(StatusEffects.NAUSEA, duration, 0, false, false, false),
+                new StatusEffectInstance(StatusEffects.SLOWNESS, duration, 1, false, false, false),
+                new StatusEffectInstance(StatusEffects.BLINDNESS, duration, 0, false, false, false),
+                new StatusEffectInstance(StatusEffects.DARKNESS, duration, 0, false, false, false),
+                new StatusEffectInstance(StatusEffects.POISON, duration, 0, false, false, false)
+        };
+
+        Random random = new Random();
+
+        // Pick 2 distinct random indices
+        int firstIndex = random.nextInt(effects.length);
+        int secondIndex;
+        do {
+            secondIndex = random.nextInt(effects.length);
+        } while (secondIndex == firstIndex);
+
+        // Apply the two chosen effects
+        player.addStatusEffect(effects[firstIndex]);
+        player.addStatusEffect(effects[secondIndex]);
     }
 
     @Override
@@ -201,7 +223,6 @@ public class PlayerSwap extends Wildcard {
                 executor.sendMessage(Text.literal("Forced swap type: " + forceType), false);
             }
         } else {
-            // Wrap the Text in a Supplier
             source.sendFeedback(() -> Text.literal("PlayerSwap triggered manually."), false);
         }
 
