@@ -57,11 +57,12 @@ public class PlayerSwap extends Wildcard {
 
             int minDelay, maxDelay;
 
+            // First hour: gradually decreasing 6–10 min ? 2–6 min
             if (tickCounter < 60 * 60 * TICKS_PER_SECOND) {
                 double progress = (double) tickCounter / (60 * 60 * TICKS_PER_SECOND);
                 minDelay = (int) lerp(6 * 60 * TICKS_PER_SECOND, 2 * 60 * TICKS_PER_SECOND, progress);
                 maxDelay = (int) lerp(10 * 60 * TICKS_PER_SECOND, 6 * 60 * TICKS_PER_SECOND, progress);
-            } else {
+            } else { // After first hour: always 2–6 min
                 minDelay = 2 * 60 * TICKS_PER_SECOND;
                 maxDelay = 6 * 60 * TICKS_PER_SECOND;
             }
@@ -85,8 +86,9 @@ public class PlayerSwap extends Wildcard {
         else if ("mob".equalsIgnoreCase(forceType)) useMob = true;
         else useMob = shouldSwapWithMob();
 
-        if (useMob) swapWithMob(player);
-        else if (players.size() > 1) {
+        if (useMob) {
+            swapWithMob(player);
+        } else if (players.size() > 1) {
             ServerPlayerEntity other = players.get(random.nextInt(players.size()));
             while (other == player && players.size() > 1) {
                 other = players.get(random.nextInt(players.size()));
@@ -106,10 +108,8 @@ public class PlayerSwap extends Wildcard {
         ServerPlayerEntity executor = PlayerUtils.getPlayer("Talis04");
         if (executor == null) return;
 
-        teleportWithEffects(executor, p1, p1.getX(), p1.getY(), p1.getZ(),
-                p2.getX(), p2.getY(), p2.getZ());
-        teleportWithEffects(executor, p2, p2.getX(), p2.getY(), p2.getZ(),
-                p1.getX(), p1.getY(), p1.getZ());
+        teleportWithEffects(executor, p1, p1.getX(), p1.getY(), p1.getZ(), p2.getX(), p2.getY(), p2.getZ());
+        teleportWithEffects(executor, p2, p2.getX(), p2.getY(), p2.getZ(), p1.getX(), p1.getY(), p1.getZ());
 
         applyNegativeEffects(p1);
         applyNegativeEffects(p2);
@@ -124,40 +124,50 @@ public class PlayerSwap extends Wildcard {
         ServerPlayerEntity executor = PlayerUtils.getPlayer("Talis04");
         if (executor == null) return;
 
-        teleportWithEffects(executor, player, player.getX(), player.getY(), player.getZ(),
-                mob.getX(), mob.getY(), mob.getZ());
-        teleportWithEffects(executor, mob, mob.getX(), mob.getY(), mob.getZ(),
-                player.getX(), player.getY(), player.getZ());
+        teleportWithEffects(executor, player, player.getX(), player.getY(), player.getZ(), mob.getX(), mob.getY(), mob.getZ());
+        teleportWithEffects(executor, mob, mob.getX(), mob.getY(), mob.getZ(), player.getX(), player.getY(), player.getZ());
 
         applyNegativeEffects(player);
     }
 
+    /** Teleports an entity (player or mob) and plays particles/sounds at both old & new locations */
     private void teleportWithEffects(ServerPlayerEntity executor, Object entity,
                                      double oldX, double oldY, double oldZ,
                                      double newX, double newY, double newZ) {
 
         String target;
-        ServerWorld world;
 
         if (entity instanceof ServerPlayerEntity playerEntity) {
             target = playerEntity.getName().getString();
-            world = (ServerWorld) playerEntity.getWorld();
+
+            // Old location effects
+            playParticlesAndSoundPlayer(playerEntity, oldX, oldY, oldZ);
+
+            // Teleport
+            executor.getServer().getCommandManager().executeWithPrefix(
+                    executor.getCommandSource(),
+                    "tp " + target + " " + newX + " " + newY + " " + newZ
+            );
+
+            // New location effects
+            playParticlesAndSoundPlayer(playerEntity, newX, newY, newZ);
+
         } else if (entity instanceof MobEntity mobEntity) {
             target = mobEntity.getUuidAsString();
-            world = (ServerWorld) mobEntity.getWorld();
-        } else return;
+            ServerWorld world = (ServerWorld) mobEntity.getWorld();
 
-        // Particles and sound at the old location
-        playTeleportEffects(entity, oldX, oldY, oldZ);
+            // Old location effects
+            playParticlesAndSoundMob(world, oldX, oldY, oldZ);
 
-        // Teleport command
-        executor.getServer().getCommandManager().executeWithPrefix(
-                executor.getCommandSource(),
-                "tp " + target + " " + newX + " " + newY + " " + newZ
-        );
+            // Teleport
+            executor.getServer().getCommandManager().executeWithPrefix(
+                    executor.getCommandSource(),
+                    "tp " + target + " " + newX + " " + newY + " " + newZ
+            );
 
-        // Particles and sound at the new location
-        playTeleportEffects(entity, newX, newY, newZ);
+            // New location effects
+            playParticlesAndSoundMob(world, newX, newY, newZ);
+        }
     }
 
     private MobEntity getNearestMob(ServerPlayerEntity player, double radius) {
@@ -171,6 +181,7 @@ public class PlayerSwap extends Wildcard {
         if (player == null || player.isSpectator()) return;
 
         int duration = 5 * TICKS_PER_SECOND;
+
         StatusEffectInstance[] effects = new StatusEffectInstance[]{
                 new StatusEffectInstance(StatusEffects.NAUSEA, duration, 0, false, false, false),
                 new StatusEffectInstance(StatusEffects.SLOWNESS, duration, 1, false, false, false),
@@ -189,17 +200,17 @@ public class PlayerSwap extends Wildcard {
         player.addStatusEffect(effects[second]);
     }
 
-    private void playTeleportEffects(Object entity, double x, double y, double z) {
-        ServerWorld world;
-        if (entity instanceof ServerPlayerEntity player) {
-            world = (ServerWorld) player.getWorld();
-            world.spawnParticles(ParticleTypes.PORTAL, x, y + 1, z, 30, 0.5, 1, 0.5, 0.1);
-            player.playSound(SoundEvents.ENTITY_ENDERMAN_TELEPORT, 1.0F, 1.0F);
-        } else if (entity instanceof MobEntity mob) {
-            world = (ServerWorld) mob.getWorld();
-            world.spawnParticles(ParticleTypes.PORTAL, x, y + 1, z, 30, 0.5, 1, 0.5, 0.1);
-            world.playSound(null, x, y, z, SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1.0F, 1.0F);
-        }
+    /** Particles + sound for players (sound always heard by the player) */
+    private void playParticlesAndSoundPlayer(ServerPlayerEntity player, double x, double y, double z) {
+        ServerWorld world = (ServerWorld) player.getWorld();
+        world.spawnParticles(ParticleTypes.PORTAL, x, y + 1, z, 30, 0.5, 1, 0.5, 0.1);
+        player.playSound(SoundEvents.ENTITY_ENDERMAN_TELEPORT, 1.0F, 1.0F);
+    }
+
+    /** Particles + sound for mobs (sound heard by nearby players only) */
+    private void playParticlesAndSoundMob(ServerWorld world, double x, double y, double z) {
+        world.spawnParticles(ParticleTypes.PORTAL, x, y + 1, z, 30, 0.5, 1, 0.5, 0.1);
+        world.playSound(null, x, y, z, SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1.0F, 1.0F);
     }
 
     @Override
@@ -209,6 +220,7 @@ public class PlayerSwap extends Wildcard {
         this.nextSwapTick = -1;
     }
 
+    /** Command registration */
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher,
                                 CommandRegistryAccess registryAccess,
                                 CommandManager.RegistrationEnvironment environment,
