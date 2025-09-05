@@ -53,7 +53,7 @@ public class PlayerSwap extends Wildcard {
 
             int elapsed = tickCounter;
             if (elapsed < 60 * 60 * TICKS_PER_SECOND) {
-                // First hour ? swaps every 5–10 min
+                // First hour -> swaps every 5-10 min
                 nextSwapTick = tickCounter + MIN_DELAY_FIRST_HOUR +
                         random.nextInt(MAX_DELAY_FIRST_HOUR - MIN_DELAY_FIRST_HOUR + 1);
             } else {
