@@ -117,6 +117,8 @@ public class FloorIsLava extends Wildcard {
     }
     
     private void checkPlayerPosition(ServerPlayerEntity player) {
+        System.out.println("FloorIsLava: Checking position for player " + player.getName().getString() + " - CONSOLE DEBUG");
+        
         // Get player's current position
         BlockPos playerPos = player.getBlockPos();
         
@@ -133,24 +135,27 @@ public class FloorIsLava extends Wildcard {
         
         for (BlockPos pos : positionsToCheck) {
             Block block = player.getWorld().getBlockState(pos).getBlock();
+            System.out.println("FloorIsLava: Checking block at " + pos + ": " + block.getName().getString() + " - CONSOLE DEBUG");
             if (NATURAL_BLOCKS.contains(block)) {
                 standingOnNaturalBlock = true;
                 foundBlock = block;
+                System.out.println("FloorIsLava: Found natural block: " + block.getName().getString() + " - CONSOLE DEBUG");
                 break;
             }
         }
         
         // Debug: Send message to player about what block they're standing on
-        if (tickCounter % (EFFECT_CHECK_INTERVAL * 5) == 0) { // Every 5 seconds
-            Block blockBelow = player.getWorld().getBlockState(playerPos.down()).getBlock();
-            player.sendMessage(Text.literal("§7Debug: Standing on " + blockBelow.getName().getString() + 
-                " | Natural: " + standingOnNaturalBlock + " | On Ground: " + player.isOnGround()), true);
-        }
+        Block blockBelow = player.getWorld().getBlockState(playerPos.down()).getBlock();
+        player.sendMessage(Text.literal("§7Debug: Standing on " + blockBelow.getName().getString() + 
+            " | Natural: " + standingOnNaturalBlock + " | On Ground: " + player.isOnGround()), true);
         
         if (standingOnNaturalBlock) {
+            System.out.println("FloorIsLava: Applying effects to " + player.getName().getString() + " - CONSOLE DEBUG");
             applyWitherEffect(player, foundBlock);
             spawnParticles(player);
             playSound(player);
+        } else {
+            System.out.println("FloorIsLava: Player " + player.getName().getString() + " not on natural block - CONSOLE DEBUG");
         }
     }
     
