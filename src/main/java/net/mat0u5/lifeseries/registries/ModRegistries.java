@@ -6,6 +6,7 @@ import net.mat0u5.lifeseries.dependencies.DependencyManager;
 import net.mat0u5.lifeseries.events.Events;
 import net.mat0u5.lifeseries.seasons.season.doublelife.DoubleLifeCommands;
 import net.mat0u5.lifeseries.seasons.season.secretlife.SecretLifeCommands;
+import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.wildcard.PlayerSwap;
 import net.mat0u5.lifeseries.seasons.season.wildlife.WildLifeCommands;
 import net.mat0u5.lifeseries.utils.other.TaskScheduler;
 import net.mat0u5.lifeseries.utils.other.TextUtils;
