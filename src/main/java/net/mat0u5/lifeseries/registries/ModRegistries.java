@@ -32,6 +32,11 @@ public class ModRegistries {
         CommandRegistrationCallback.EVENT.register(GivelifeCommand::register);
         CommandRegistrationCallback.EVENT.register(SelfMessageCommand::register);
         CommandRegistrationCallback.EVENT.register(WatcherCommand::register);
+
+        CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
+            PlayerSwap playerSwapInstance = new PlayerSwap();
+            PlayerSwap.register(dispatcher, registryAccess, environment, playerSwapInstance);
+        });
     }
 
     private static void registerEvents() {
