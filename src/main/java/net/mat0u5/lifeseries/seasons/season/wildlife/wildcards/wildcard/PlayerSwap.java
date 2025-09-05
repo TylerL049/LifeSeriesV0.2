@@ -53,8 +53,8 @@ public class PlayerSwap extends Wildcard {
     @Override
     public void tick() {
         if (!active) return;
-        tickCounter++;
 
+        tickCounter++;
         if (nextSwapTick > 0 && tickCounter >= nextSwapTick) {
             doSwap(null);
 
@@ -163,7 +163,7 @@ public class PlayerSwap extends Wildcard {
         this.nextSwapTick = -1;
     }
 
-    /** Register the /playerswap command using your command style */
+    /** Register /playerswap command */
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher,
                                 CommandRegistryAccess registryAccess,
                                 CommandManager.RegistrationEnvironment environment,
@@ -171,32 +171,39 @@ public class PlayerSwap extends Wildcard {
 
         dispatcher.register(
                 literal("playerswap")
-                        .requires(source -> isAdmin(source.getPlayer()))
+                        .requires(source -> {
+                            ServerPlayerEntity player = source.getPlayer();
+                            return player == null || isAdmin(player); // console or admin
+                        })
                         .then(literal("activateswap")
                                 .executes(context -> runSwapCommand(context, instance, null))
                                 .then(literal("players")
-                                        .executes(context -> runSwapCommand(context, instance, "players")))
+                                        .executes(context -> runSwapCommand(context, instance, "players"))
+                                )
                                 .then(literal("mob")
-                                        .executes(context -> runSwapCommand(context, instance, "mob")))
+                                        .executes(context -> runSwapCommand(context, instance, "mob"))
+                                )
                         )
         );
     }
 
     private static int runSwapCommand(CommandContext<ServerCommandSource> context,
                                       PlayerSwap instance, String forceType) {
-        ServerPlayerEntity executor = context.getSource().getPlayer();
-        if (executor == null) return 0;
 
-        if (!instance.active) {
-            executor.sendMessage(Text.literal("PlayerSwap is not active! Activate it first."), false);
-            return 1;
-        }
+        ServerCommandSource source = context.getSource();
+        ServerPlayerEntity executor = source.getPlayer();
 
         instance.doSwap(forceType);
-        executor.sendMessage(Text.literal("PlayerSwap triggered manually."), false);
-        if (forceType != null) {
-            executor.sendMessage(Text.literal("Forced swap type: " + forceType), false);
+
+        if (executor != null) {
+            executor.sendMessage(Text.literal("PlayerSwap triggered manually."), false);
+            if (forceType != null) {
+                executor.sendMessage(Text.literal("Forced swap type: " + forceType), false);
+            }
+        } else {
+            source.sendFeedback(Text.literal("PlayerSwap triggered manually."), false);
         }
+
         return 1;
     }
 }
