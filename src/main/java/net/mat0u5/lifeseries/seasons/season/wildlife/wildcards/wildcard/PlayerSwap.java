@@ -57,12 +57,11 @@ public class PlayerSwap extends Wildcard {
 
             int minDelay, maxDelay;
 
-            // First hour: gradually decreasing 6-10 min ? 2-6 min
             if (tickCounter < 60 * 60 * TICKS_PER_SECOND) {
                 double progress = (double) tickCounter / (60 * 60 * TICKS_PER_SECOND);
                 minDelay = (int) lerp(6 * 60 * TICKS_PER_SECOND, 2 * 60 * TICKS_PER_SECOND, progress);
                 maxDelay = (int) lerp(10 * 60 * TICKS_PER_SECOND, 6 * 60 * TICKS_PER_SECOND, progress);
-            } else { // Second hour and beyond: 2-6 min
+            } else {
                 minDelay = 2 * 60 * TICKS_PER_SECOND;
                 maxDelay = 6 * 60 * TICKS_PER_SECOND;
             }
@@ -107,8 +106,10 @@ public class PlayerSwap extends Wildcard {
         ServerPlayerEntity executor = PlayerUtils.getPlayer("Talis04");
         if (executor == null) return;
 
-        teleportWithEffects(executor, p1, p1.getX(), p1.getY(), p1.getZ(), p2.getX(), p2.getY(), p2.getZ());
-        teleportWithEffects(executor, p2, p2.getX(), p2.getY(), p2.getZ(), p1.getX(), p1.getY(), p1.getZ());
+        teleportWithEffects(executor, p1, p1.getX(), p1.getY(), p1.getZ(),
+                p2.getX(), p2.getY(), p2.getZ());
+        teleportWithEffects(executor, p2, p2.getX(), p2.getY(), p2.getZ(),
+                p1.getX(), p1.getY(), p1.getZ());
 
         applyNegativeEffects(p1);
         applyNegativeEffects(p2);
@@ -123,13 +124,14 @@ public class PlayerSwap extends Wildcard {
         ServerPlayerEntity executor = PlayerUtils.getPlayer("Talis04");
         if (executor == null) return;
 
-        teleportWithEffects(executor, player, player.getX(), player.getY(), player.getZ(), mob.getX(), mob.getY(), mob.getZ());
-        teleportWithEffects(executor, mob, mob.getX(), mob.getY(), mob.getZ(), player.getX(), player.getY(), player.getZ());
+        teleportWithEffects(executor, player, player.getX(), player.getY(), player.getZ(),
+                mob.getX(), mob.getY(), mob.getZ());
+        teleportWithEffects(executor, mob, mob.getX(), mob.getY(), mob.getZ(),
+                player.getX(), player.getY(), player.getZ());
 
         applyNegativeEffects(player);
     }
 
-    /** Generalized teleport method for both players and mobs with particles/sound at old & new locations */
     private void teleportWithEffects(ServerPlayerEntity executor, Object entity,
                                      double oldX, double oldY, double oldZ,
                                      double newX, double newY, double newZ) {
@@ -143,23 +145,19 @@ public class PlayerSwap extends Wildcard {
         } else if (entity instanceof MobEntity mobEntity) {
             target = mobEntity.getUuidAsString();
             world = (ServerWorld) mobEntity.getWorld();
-        } else {
-            return; // Unknown entity type
-        }
+        } else return;
 
-                        // Play teleport effects at the old location
-        playTeleportEffects(entity);
+        // Particles and sound at the old location
+        playTeleportEffects(entity, oldX, oldY, oldZ);
 
-
-        // Perform teleport
+        // Teleport command
         executor.getServer().getCommandManager().executeWithPrefix(
                 executor.getCommandSource(),
                 "tp " + target + " " + newX + " " + newY + " " + newZ
         );
 
-
-        // Play teleport effects at the new location
-        playTeleportEffects(entity);
+        // Particles and sound at the new location
+        playTeleportEffects(entity, newX, newY, newZ);
     }
 
     private MobEntity getNearestMob(ServerPlayerEntity player, double radius) {
@@ -173,7 +171,6 @@ public class PlayerSwap extends Wildcard {
         if (player == null || player.isSpectator()) return;
 
         int duration = 5 * TICKS_PER_SECOND;
-
         StatusEffectInstance[] effects = new StatusEffectInstance[]{
                 new StatusEffectInstance(StatusEffects.NAUSEA, duration, 0, false, false, false),
                 new StatusEffectInstance(StatusEffects.SLOWNESS, duration, 1, false, false, false),
@@ -192,23 +189,15 @@ public class PlayerSwap extends Wildcard {
         player.addStatusEffect(effects[second]);
     }
 
-    /** Play teleport particles & sound at a location */
-    private void playTeleportEffects(Object entity) {
+    private void playTeleportEffects(Object entity, double x, double y, double z) {
+        ServerWorld world;
         if (entity instanceof ServerPlayerEntity player) {
-            ServerWorld world = (ServerWorld) player.getWorld();
-            double x = player.getX();
-            double y = player.getY();
-            double z = player.getZ();
+            world = (ServerWorld) player.getWorld();
             world.spawnParticles(ParticleTypes.PORTAL, x, y + 1, z, 30, 0.5, 1, 0.5, 0.1);
-            // player hears it directly
             player.playSound(SoundEvents.ENTITY_ENDERMAN_TELEPORT, 1.0F, 1.0F);
         } else if (entity instanceof MobEntity mob) {
-            ServerWorld world = (ServerWorld) mob.getWorld();
-            double x = mob.getX();
-            double y = mob.getY();
-            double z = mob.getZ();
+            world = (ServerWorld) mob.getWorld();
             world.spawnParticles(ParticleTypes.PORTAL, x, y + 1, z, 30, 0.5, 1, 0.5, 0.1);
-            // nearby players hear it
             world.playSound(null, x, y, z, SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1.0F, 1.0F);
         }
     }
@@ -220,7 +209,6 @@ public class PlayerSwap extends Wildcard {
         this.nextSwapTick = -1;
     }
 
-    /** Command registration */
     public static void register(CommandDispatcher<ServerCommandSource> dispatcher,
                                 CommandRegistryAccess registryAccess,
                                 CommandManager.RegistrationEnvironment environment,
