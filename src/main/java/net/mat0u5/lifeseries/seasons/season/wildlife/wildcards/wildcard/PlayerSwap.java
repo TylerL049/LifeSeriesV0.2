@@ -201,7 +201,8 @@ public class PlayerSwap extends Wildcard {
                 executor.sendMessage(Text.literal("Forced swap type: " + forceType), false);
             }
         } else {
-            source.sendFeedback(Text.literal("PlayerSwap triggered manually."), false);
+            // Wrap the Text in a Supplier
+            source.sendFeedback(() -> Text.literal("PlayerSwap triggered manually."), false);
         }
 
         return 1;
