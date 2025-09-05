@@ -4,28 +4,34 @@ import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcard;
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcards;
 import net.mat0u5.lifeseries.utils.player.PlayerUtils;
 import net.minecraft.block.Block;
+import net.minecraft.block.Blocks;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.util.Identifier;
 
 import java.util.List;
+import java.util.Set;
 
 public class FloorIsLava extends Wildcard {
 
     private boolean active = false;
     private static final int TICKS_PER_SECOND = 20;
 
-    // Correct TagKey creation for 1.21.6
-    private static final TagKey<Block> NATURAL_BLOCKS_TAG = TagKey.of(
-            RegistryKeys.BLOCK,
-            RegistryKey.of(RegistryKeys.BLOCK, new Identifier("lifeseries", "natural_blocks"))
+    // Use a static set instead of a TagKey
+    private static final Set<Block> NATURAL_BLOCKS = Set.of(
+            Blocks.GRASS_BLOCK,
+            Blocks.DIRT,
+            Blocks.STONE,
+            Blocks.SAND,
+            Blocks.DIRT_PATH,
+            Blocks.SNOW,
+            Blocks.SNOW_BLOCK,
+            Blocks.MOSS_BLOCK,
+            Blocks.MOSS_CARPET,
+            Blocks.DEEPSLATE
     );
 
     @Override
@@ -51,15 +57,10 @@ public class FloorIsLava extends Wildcard {
         for (ServerPlayerEntity player : players) {
             if (player.isSpectator()) continue;
 
-            // BlockPos requires integers
-            BlockPos posBelow = new BlockPos(
-                    (int) Math.floor(player.getX()),
-                    (int) Math.floor(player.getY() - 0.1),
-                    (int) Math.floor(player.getZ())
-            );
+            BlockPos posBelow = player.getBlockPos().down(); // simple and works fine
+            Block blockBelow = player.getWorld().getBlockState(posBelow).getBlock();
 
-            // Check block state against tag
-            if (player.getWorld().getBlockState(posBelow).isIn(NATURAL_BLOCKS_TAG)) {
+            if (NATURAL_BLOCKS.contains(blockBelow)) {
                 applyWither(player);
                 spawnLavaParticles(player);
             }
@@ -69,11 +70,11 @@ public class FloorIsLava extends Wildcard {
     private void applyWither(ServerPlayerEntity player) {
         StatusEffectInstance wither = new StatusEffectInstance(
                 StatusEffects.WITHER,
-                5,
+                2 * TICKS_PER_SECOND, // 2 seconds
                 1,
-                true,
-                true,
-                true
+                true,  // show particles
+                true,  // show icon
+                true   // ambient
         );
         player.addStatusEffect(wither);
     }
@@ -83,7 +84,7 @@ public class FloorIsLava extends Wildcard {
             serverWorld.spawnParticles(
                     ParticleTypes.PORTAL,
                     player.getX(),
-                    player.getY() + 1.0,
+                    player.getY() + 0.5,
                     player.getZ(),
                     10,
                     0.3, 0.5, 0.3,
