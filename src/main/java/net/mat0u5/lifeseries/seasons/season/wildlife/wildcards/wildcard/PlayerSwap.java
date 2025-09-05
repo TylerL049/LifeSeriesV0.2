@@ -10,6 +10,8 @@ import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.MobEntity;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.util.math.Box;
 
 import java.util.List;
 import java.util.Random;
@@ -18,9 +20,9 @@ import static net.mat0u5.lifeseries.Main.livesManager;
 
 public class PlayerSwap extends Wildcard {
 
-    private static final int TICKS_PER_SECOND = 20;
     private final Random random = new Random();
     private boolean active = false;
+    private static final int TICKS_PER_SECOND = 20;
 
     @Override
     public Wildcards getType() {
@@ -52,13 +54,11 @@ public class PlayerSwap extends Wildcard {
         MinecraftServer server = p1.getServer();
         if (server == null) return;
 
-        // Use Talis04 as the command executor
         ServerPlayerEntity executor = server.getPlayerManager().getPlayer("Talis04");
         if (executor == null) return;
-
         ServerCommandSource source = executor.getCommandSource();
 
-        // Swap players via /tp commands
+        // Swap players using /tp commands
         server.getCommandManager().executeWithPrefix(source,
                 "tp " + p1.getName().getString() + " " + p2.getX() + " " + p2.getY() + " " + p2.getZ());
         server.getCommandManager().executeWithPrefix(source,
@@ -68,8 +68,8 @@ public class PlayerSwap extends Wildcard {
         applyNegativeEffects(p1);
         applyNegativeEffects(p2);
 
-        // Optionally swap a nearby mob with a random player
-        MobEntity mob = PlayerUtils.getNearbyMob(p1, 50); // your helper to get nearest mob
+        // Swap nearby mob with p1
+        MobEntity mob = getNearestMob(p1, 50);
         if (mob != null) {
             server.getCommandManager().executeWithPrefix(source,
                     "execute at " + mob.getUuidAsString() + " run tp " + mob.getUuidAsString() +
@@ -77,7 +77,17 @@ public class PlayerSwap extends Wildcard {
         }
 
         // Schedule next swap
-        scheduleSwap(30 * TICKS_PER_SECOND); // 30 seconds for testing
+        scheduleSwap(30 * TICKS_PER_SECOND); // repeat after 30s
+    }
+
+    private MobEntity getNearestMob(ServerPlayerEntity player, double radius) {
+        ServerWorld world = player.getServerWorld();
+        Box box = new Box(player.getX() - radius, player.getY() - radius, player.getZ() - radius,
+                          player.getX() + radius, player.getY() + radius, player.getZ() + radius);
+
+        List<MobEntity> mobs = world.getEntitiesByClass(MobEntity.class, box, mob -> true);
+        if (mobs.isEmpty()) return null;
+        return mobs.get(random.nextInt(mobs.size())); // pick random mob from nearby
     }
 
     private void applyNegativeEffects(ServerPlayerEntity player) {
