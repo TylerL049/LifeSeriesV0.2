@@ -204,12 +204,6 @@ public class WildcardManager {
     }
 
     public static void tick() {
-        if (server != null && server.getTicks() % 100 == 0) { // Every 5 seconds
-        System.out.println("WildcardManager.tick() - Active wildcards: " + activeWildcards.size() + " - CONSOLE DEBUG");
-        for (Wildcards type : activeWildcards.keySet()) {
-            System.out.println("  - " + type + " (active: " + activeWildcards.get(type).active + ") - CONSOLE DEBUG");
-        }
-    }
 
 
         SuperpowersWildcard.onTick();
