@@ -70,6 +70,7 @@ public class FloorLava extends Wildcard {
         this.active = true;
         this.tickCounter = 0;
         this.lastEffectTick.clear();
+        System.out.println("FloorLava.activate() - Set active to: " + this.active + " - CONSOLE DEBUG");
     
         // Send activation message to all players for debugging
         List<ServerPlayerEntity> players = PlayerUtils.getAllFunctioningPlayers();
