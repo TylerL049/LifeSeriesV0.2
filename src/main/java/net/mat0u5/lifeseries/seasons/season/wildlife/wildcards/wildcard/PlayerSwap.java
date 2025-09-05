@@ -12,6 +12,7 @@ import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.Box;
+import net.minecraft.world.World;
 
 import java.util.List;
 import java.util.Random;
@@ -81,11 +82,13 @@ public class PlayerSwap extends Wildcard {
     }
 
     private MobEntity getNearestMob(ServerPlayerEntity player, double radius) {
-        ServerWorld world = player.getServerWorld();
+        World world = player.getWorld();
+        if (!(world instanceof ServerWorld serverWorld)) return null;
+
         Box box = new Box(player.getX() - radius, player.getY() - radius, player.getZ() - radius,
                           player.getX() + radius, player.getY() + radius, player.getZ() + radius);
 
-        List<MobEntity> mobs = world.getEntitiesByClass(MobEntity.class, box, mob -> true);
+        List<MobEntity> mobs = serverWorld.getEntitiesByClass(MobEntity.class, box, mob -> true);
         if (mobs.isEmpty()) return null;
         return mobs.get(random.nextInt(mobs.size())); // pick random mob from nearby
     }
