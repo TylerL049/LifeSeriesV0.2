@@ -13,6 +13,7 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.sound.SoundCategory;
+import net.minecraft.text.Text;
 
 import java.util.HashMap;
 import java.util.List;
@@ -23,12 +24,12 @@ import java.util.UUID;
 public class FloorIsLava extends Wildcard {
     private boolean active = false;
     private static final int TICKS_PER_SECOND = 20;
-    private static final int EFFECT_CHECK_INTERVAL = 10; // Check every 10 ticks (0.5 seconds)
+    private static final int EFFECT_CHECK_INTERVAL = 20; // Check every 20 ticks (1 second) for better performance
     private int tickCounter = 0;
     
     // Track when players last received the effect to prevent spam
-    private final Map<UUID, Long> lastEffectTime = new HashMap<>();
-    private static final long EFFECT_COOLDOWN = 1000; // 1 second cooldown in milliseconds
+    private final Map<UUID, Integer> lastEffectTick = new HashMap<>();
+    private static final int EFFECT_COOLDOWN_TICKS = 40; // 2 seconds cooldown in ticks
     
     private static final Set<Block> NATURAL_BLOCKS = Set.of(
             Blocks.GRASS_BLOCK,
@@ -48,7 +49,13 @@ public class FloorIsLava extends Wildcard {
             Blocks.COBBLESTONE,
             Blocks.ANDESITE,
             Blocks.DIORITE,
-            Blocks.GRANITE
+            Blocks.GRANITE,
+            Blocks.CALCITE,
+            Blocks.TUFF,
+            Blocks.DRIPSTONE_BLOCK,
+            Blocks.ROOTED_DIRT,
+            Blocks.MUD,
+            Blocks.CLAY
     );
 
     @Override
@@ -60,14 +67,34 @@ public class FloorIsLava extends Wildcard {
     public void activate() {
         this.active = true;
         this.tickCounter = 0;
-        this.lastEffectTime.clear();
+        this.lastEffectTick.clear();
+        
+        // Send activation message to all players for debugging
+        List<ServerPlayerEntity> players = PlayerUtils.getAllFunctioningPlayers();
+        if (players != null) {
+            for (ServerPlayerEntity player : players) {
+                if (player != null) {
+                    player.sendMessage(Text.literal("§cFloor is Lava wildcard has been activated!"), false);
+                }
+            }
+        }
     }
 
     @Override
     public void deactivate() {
         this.active = false;
         this.tickCounter = 0;
-        this.lastEffectTime.clear();
+        this.lastEffectTick.clear();
+        
+        // Send deactivation message to all players for debugging
+        List<ServerPlayerEntity> players = PlayerUtils.getAllFunctioningPlayers();
+        if (players != null) {
+            for (ServerPlayerEntity player : players) {
+                if (player != null) {
+                    player.sendMessage(Text.literal("§aFloor is Lava wildcard has been deactivated!"), false);
+                }
+            }
+        }
     }
 
     @Override
@@ -90,96 +117,149 @@ public class FloorIsLava extends Wildcard {
     }
     
     private void checkPlayerPosition(ServerPlayerEntity player) {
-        // Check if player is on ground (not flying/swimming/etc)
-        if (!player.isOnGround()) return;
-        
-        // Get the block position directly below the player's feet
+        // Get player's current position
         BlockPos playerPos = player.getBlockPos();
-        BlockPos posBelow = playerPos.down();
         
-        // Also check the block the player is standing in (for slabs, carpets, etc.)
-        BlockPos currentPos = playerPos;
+        // Check multiple positions around the player's feet
+        BlockPos[] positionsToCheck = {
+            playerPos.down(),           // Directly below
+            playerPos.down(2),          // Two blocks below (in case standing on slab)
+            playerPos,                  // Current position (in case standing in tall grass, etc.)
+            playerPos.add(0, -1, 0)     // Alternative way to get position below
+        };
         
-        Block blockBelow = player.getWorld().getBlockState(posBelow).getBlock();
-        Block blockCurrent = player.getWorld().getBlockState(currentPos).getBlock();
+        boolean standingOnNaturalBlock = false;
+        Block foundBlock = null;
         
-        // Check if either the block below or the block they're standing in is a natural block
-        boolean standingOnNaturalBlock = NATURAL_BLOCKS.contains(blockBelow) || NATURAL_BLOCKS.contains(blockCurrent);
+        for (BlockPos pos : positionsToCheck) {
+            Block block = player.getWorld().getBlockState(pos).getBlock();
+            if (NATURAL_BLOCKS.contains(block)) {
+                standingOnNaturalBlock = true;
+                foundBlock = block;
+                break;
+            }
+        }
+        
+        // Debug: Send message to player about what block they're standing on
+        if (tickCounter % (EFFECT_CHECK_INTERVAL * 5) == 0) { // Every 5 seconds
+            Block blockBelow = player.getWorld().getBlockState(playerPos.down()).getBlock();
+            player.sendMessage(Text.literal("§7Debug: Standing on " + blockBelow.getName().getString() + 
+                " | Natural: " + standingOnNaturalBlock + " | On Ground: " + player.isOnGround()), true);
+        }
         
         if (standingOnNaturalBlock) {
-            applyWitherEffect(player);
+            applyWitherEffect(player, foundBlock);
             spawnParticles(player);
             playSound(player);
         }
     }
     
-    private void applyWitherEffect(ServerPlayerEntity player) {
+    private void applyWitherEffect(ServerPlayerEntity player, Block block) {
         UUID playerId = player.getUuid();
-        long currentTime = System.currentTimeMillis();
         
         // Check cooldown to prevent effect spam
-        if (lastEffectTime.containsKey(playerId)) {
-            long lastTime = lastEffectTime.get(playerId);
-            if (currentTime - lastTime < EFFECT_COOLDOWN) {
+        if (lastEffectTick.containsKey(playerId)) {
+            int lastTick = lastEffectTick.get(playerId);
+            if (tickCounter - lastTick < EFFECT_COOLDOWN_TICKS) {
                 return; // Still on cooldown
             }
         }
         
-        // Apply Wither effect for 3 seconds (level 0 = Wither I)
+        // Apply Wither effect for 4 seconds (level 0 = Wither I)
         StatusEffectInstance witherEffect = new StatusEffectInstance(
                 StatusEffects.WITHER,
-                3 * TICKS_PER_SECOND, // 3 seconds
+                4 * TICKS_PER_SECOND, // 4 seconds
                 0, // Level 0 (Wither I)
                 false, // Not ambient
                 true,  // Show particles
                 true   // Show icon
         );
         
-        player.addStatusEffect(witherEffect);
-        lastEffectTime.put(playerId, currentTime);
+        boolean applied = player.addStatusEffect(witherEffect);
+        
+        if (applied) {
+            lastEffectTick.put(playerId, tickCounter);
+            
+            // Send message to player for debugging
+            player.sendMessage(Text.literal("§c§lOUCH! The " + block.getName().getString() + 
+                " burns your feet!"), true);
+        }
     }
     
     private void spawnParticles(ServerPlayerEntity player) {
         if (!(player.getWorld() instanceof ServerWorld serverWorld)) return;
         
-        // Spawn particles around the player's feet
-        serverWorld.spawnParticles(
-                ParticleTypes.SMOKE,
-                player.getX(),
-                player.getY() + 0.1, // Just above feet
-                player.getZ(),
-                15, // Number of particles
-                0.5, // X spread
-                0.1, // Y spread
-                0.5, // Z spread
-                0.02 // Speed
-        );
-        
-        // Also spawn some flame particles for dramatic effect
-        serverWorld.spawnParticles(
-                ParticleTypes.FLAME,
-                player.getX(),
-                player.getY() + 0.1,
-                player.getZ(),
-                5,
-                0.3, 0.1, 0.3,
-                0.01
-        );
+        try {
+            // Spawn smoke particles around the player's feet
+            serverWorld.spawnParticles(
+                    ParticleTypes.SMOKE,
+                    player.getX(),
+                    player.getY() + 0.1, // Just above feet
+                    player.getZ(),
+                    20, // Number of particles
+                    0.5, // X spread
+                    0.2, // Y spread  
+                    0.5, // Z spread
+                    0.05 // Speed
+            );
+            
+            // Spawn flame particles for dramatic effect
+            serverWorld.spawnParticles(
+                    ParticleTypes.FLAME,
+                    player.getX(),
+                    player.getY() + 0.1,
+                    player.getZ(),
+                    8,
+                    0.3, 0.1, 0.3,
+                    0.02
+            );
+            
+            // Spawn lava particles for extra effect
+            serverWorld.spawnParticles(
+                    ParticleTypes.LAVA,
+                    player.getX(),
+                    player.getY() + 0.1,
+                    player.getZ(),
+                    3,
+                    0.2, 0.1, 0.2,
+                    0.01
+            );
+        } catch (Exception e) {
+            // Log error but don't crash
+            System.err.println("Error spawning particles for FloorIsLava: " + e.getMessage());
+        }
     }
     
     private void playSound(ServerPlayerEntity player) {
         if (!(player.getWorld() instanceof ServerWorld serverWorld)) return;
         
-        // Play a burning sound effect
-        serverWorld.playSound(
-                null, // No specific player (everyone nearby can hear)
-                player.getX(),
-                player.getY(),
-                player.getZ(),
-                SoundEvents.BLOCK_FIRE_AMBIENT,
-                SoundCategory.PLAYERS,
-                0.5F, // Volume
-                1.2F  // Pitch
-        );
+        try {
+            // Play multiple sound effects for better feedback
+            serverWorld.playSound(
+                    null,
+                    player.getX(),
+                    player.getY(),
+                    player.getZ(),
+                    SoundEvents.BLOCK_FIRE_AMBIENT,
+                    SoundCategory.PLAYERS,
+                    0.7F, // Volume
+                    1.0F + (float)(Math.random() * 0.4 - 0.2) // Random pitch variation
+            );
+            
+            // Also play a sizzling sound
+            serverWorld.playSound(
+                    null,
+                    player.getX(),
+                    player.getY(),
+                    player.getZ(),
+                    SoundEvents.BLOCK_LAVA_EXTINGUISH,
+                    SoundCategory.PLAYERS,
+                    0.3F, // Lower volume
+                    1.5F  // Higher pitch
+            );
+        } catch (Exception e) {
+            // Log error but don't crash  
+            System.err.println("Error playing sound for FloorIsLava: " + e.getMessage());
+        }
     }
 }
