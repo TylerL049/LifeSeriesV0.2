@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-public class FloorIsLava extends Wildcard {
+public class FloorLava extends Wildcard {
     private boolean active = false;
     private static final int TICKS_PER_SECOND = 20;
     private static final int EFFECT_CHECK_INTERVAL = 20; // Check every 20 ticks (1 second) for better performance
