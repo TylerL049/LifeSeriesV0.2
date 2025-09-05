@@ -20,6 +20,7 @@ public enum Wildcards {
     GRAVITY_MANIPULATION,
     HOT_POTATO,
     PLAYER_SWAP,
+    FLOOR_IS_LAVA,
     CALLBACK;
 
 

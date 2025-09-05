@@ -24,7 +24,7 @@ public class FloorIsLava extends Wildcard {
             Blocks.DIRT,
             Blocks.STONE,
             Blocks.SAND,
-            Blocks.PATH,
+            Blocks.DIRT_PATH,
             Blocks.SNOW,
             Blocks.SNOW_BLOCK,
             Blocks.MOSS_BLOCK,
