@@ -59,9 +59,9 @@ public class FloorIsLava extends Wildcard {
 
             // Block under player's feet (round down to get block)
             BlockPos posBelow = new BlockPos(
-                    Math.floor(player.getX()),
-                    Math.floor(player.getY() - 0.1),
-                    Math.floor(player.getZ())
+                (int) Math.floor(player.getX()),
+                (int) Math.floor(player.getY() - 0.1),
+                (int) Math.floor(player.getZ())
             );
             World world = player.getWorld();
             Block blockBelow = world.getBlockState(posBelow).getBlock();
