@@ -17,107 +17,97 @@ public class ChooseWildcardScreen extends DefaultScreen {
     @Override
     protected void init() {
         super.init();
+
         int oneThirdX = startX + BG_WIDTH / 3;
-        int twoThirdX = startX + (BG_WIDTH / 3)*2;
-
-        this.addDrawableChild(
-                ButtonWidget.builder(Text.literal("Size Shifting"), btn -> {
-                            if (this.client != null) this.client.setScreen(null);
-                            NetworkHandlerClient.sendStringPacket(PacketNames.SELECTED_WILDCARD,"size_shifting");
-                        })
-                        .position(oneThirdX - 40, startY  + 45)
-                        .size(80, 20)
-                        .build()
-        );
-
-        this.addDrawableChild(
-                ButtonWidget.builder(Text.literal("Hunger"), btn -> {
-                            if (this.client != null) this.client.setScreen(null);
-                            NetworkHandlerClient.sendStringPacket(PacketNames.SELECTED_WILDCARD,"hunger");
-                        })
-                        .position(oneThirdX - 40, startY  + 75)
-                        .size(80, 20)
-                        .build()
-        );
-        this.addDrawableChild(
-                ButtonWidget.builder(Text.literal("Snails"), btn -> {
-                            if (this.client != null) this.client.setScreen(null);
-                            NetworkHandlerClient.sendStringPacket(PacketNames.SELECTED_WILDCARD,"snails");
-                        })
-                        .position(oneThirdX - 40, startY  + 105)
-                        .size(80, 20)
-                        .build()
-        );
-        this.addDrawableChild(
-                ButtonWidget.builder(Text.literal("Time Dilation"), btn -> {
-                            if (this.client != null) this.client.setScreen(null);
-                            NetworkHandlerClient.sendStringPacket(PacketNames.SELECTED_WILDCARD,"time_dilation");
-                        })
-                        .position(oneThirdX - 40, startY  + 135)
-                        .size(80, 20)
-                        .build()
-        );
-
+        int twoThirdX = startX + (BG_WIDTH / 3) * 2;
 
         /*
-            Second column
+            Left column
          */
-
         this.addDrawableChild(
-                ButtonWidget.builder(Text.literal("Trivia"), btn -> {
-                            if (this.client != null) this.client.setScreen(null);
-                            NetworkHandlerClient.sendStringPacket(PacketNames.SELECTED_WILDCARD,"trivia");
-                        })
-                        .position(twoThirdX - 40, startY  + 45)
+                ButtonWidget.builder(Text.literal("Size Shifting"), btn -> selectWildcard("size_shifting"))
+                        .position(oneThirdX - 40, startY + 45)
                         .size(80, 20)
                         .build()
         );
 
         this.addDrawableChild(
-                ButtonWidget.builder(Text.literal("Mob Swap"), btn -> {
-                            if (this.client != null) this.client.setScreen(null);
-                            NetworkHandlerClient.sendStringPacket(PacketNames.SELECTED_WILDCARD,"mob_swap");
-                        })
-                        .position(twoThirdX - 40, startY  + 75)
+                ButtonWidget.builder(Text.literal("Hunger"), btn -> selectWildcard("hunger"))
+                        .position(oneThirdX - 40, startY + 75)
                         .size(80, 20)
                         .build()
         );
+
         this.addDrawableChild(
-                ButtonWidget.builder(Text.literal("Superpowers"), btn -> {
-                            if (this.client != null) this.client.setScreen(null);
-                            NetworkHandlerClient.sendStringPacket(PacketNames.SELECTED_WILDCARD,"superpowers");
-                        })
-                        .position(twoThirdX - 40, startY  + 105)
+                ButtonWidget.builder(Text.literal("Snails"), btn -> selectWildcard("snails"))
+                        .position(oneThirdX - 40, startY + 105)
                         .size(80, 20)
                         .build()
         );
+
         this.addDrawableChild(
-                ButtonWidget.builder(Text.literal("Callback"), btn -> {
-                            if (this.client != null) this.client.setScreen(null);
-                            NetworkHandlerClient.sendStringPacket(PacketNames.SELECTED_WILDCARD,"callback");
-                        })
-                        .position(twoThirdX - 40, startY  + 135)
+                ButtonWidget.builder(Text.literal("Time Dilation"), btn -> selectWildcard("time_dilation"))
+                        .position(oneThirdX - 40, startY + 135)
                         .size(80, 20)
                         .build()
         );
+
         this.addDrawableChild(
-                ButtonWidget.builder(Text.literal("Gravity Manipulation"), btn -> {
-                            if (this.client != null) this.client.setScreen(null);
-                            NetworkHandlerClient.sendStringPacket(PacketNames.SELECTED_WILDCARD,"gravity_manipulation");
-                        })
-                        .position(twoThirdX - 40, startY  + 165) // adjust position as needed
+                ButtonWidget.builder(Text.literal("Player Swap"), btn -> selectWildcard("player_swap"))
+                        .position(oneThirdX - 40, startY + 165)
                         .size(80, 20)
                         .build()
         );
+
+        /*
+            Right column
+         */
         this.addDrawableChild(
-                ButtonWidget.builder(Text.literal("Hot Potato"), btn -> {
-                            if (this.client != null) this.client.setScreen(null);
-                            NetworkHandlerClient.sendStringPacket(PacketNames.SELECTED_WILDCARD, "hot_potato");
-                        })
+                ButtonWidget.builder(Text.literal("Trivia"), btn -> selectWildcard("trivia"))
+                        .position(twoThirdX - 40, startY + 45)
+                        .size(80, 20)
+                        .build()
+        );
+
+        this.addDrawableChild(
+                ButtonWidget.builder(Text.literal("Mob Swap"), btn -> selectWildcard("mob_swap"))
+                        .position(twoThirdX - 40, startY + 75)
+                        .size(80, 20)
+                        .build()
+        );
+
+        this.addDrawableChild(
+                ButtonWidget.builder(Text.literal("Superpowers"), btn -> selectWildcard("superpowers"))
+                        .position(twoThirdX - 40, startY + 105)
+                        .size(80, 20)
+                        .build()
+        );
+
+        this.addDrawableChild(
+                ButtonWidget.builder(Text.literal("Callback"), btn -> selectWildcard("callback"))
+                        .position(twoThirdX - 40, startY + 135)
+                        .size(80, 20)
+                        .build()
+        );
+
+        this.addDrawableChild(
+                ButtonWidget.builder(Text.literal("Gravity Manipulation"), btn -> selectWildcard("gravity_manipulation"))
+                        .position(twoThirdX - 40, startY + 165)
+                        .size(80, 20)
+                        .build()
+        );
+
+        this.addDrawableChild(
+                ButtonWidget.builder(Text.literal("Hot Potato"), btn -> selectWildcard("hot_potato"))
                         .position(twoThirdX - 40, startY + 195)
                         .size(80, 20)
                         .build()
         );
+    }
+
+    private void selectWildcard(String wildcardName) {
+        if (this.client != null) this.client.setScreen(null);
+        NetworkHandlerClient.sendStringPacket(PacketNames.SELECTED_WILDCARD, wildcardName);
     }
 
     @Override
