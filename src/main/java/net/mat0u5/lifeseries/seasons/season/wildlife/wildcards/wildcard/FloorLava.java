@@ -60,7 +60,7 @@ public class FloorLava extends Wildcard {
 
     @Override
     public Wildcards getType() {
-        return Wildcards.FLOOR_IS_LAVA;
+        return Wildcards.FLOOR_LAVA;
     }
 
     @Override
