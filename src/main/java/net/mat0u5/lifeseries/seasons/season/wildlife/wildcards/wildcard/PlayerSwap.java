@@ -17,6 +17,7 @@ import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.server.MinecraftServer;
 
 import java.util.List;
 import java.util.Random;
@@ -108,8 +109,12 @@ public class PlayerSwap extends Wildcard {
         ServerPlayerEntity executor = PlayerUtils.getPlayer("Talis04");
         if (executor == null) return;
 
-        teleportWithEffects(executor, p1, p1.getX(), p1.getY(), p1.getZ(), p2.getX(), p2.getY(), p2.getZ());
-        teleportWithEffects(executor, p2, p2.getX(), p2.getY(), p2.getZ(), p1.getX(), p1.getY(), p1.getZ());
+        // Store original positions
+        double p1X = p1.getX(), p1Y = p1.getY(), p1Z = p1.getZ();
+        double p2X = p2.getX(), p2Y = p2.getY(), p2Z = p2.getZ();
+
+        teleportWithEffects(executor, p1, p1X, p1Y, p1Z, p2X, p2Y, p2Z);
+        teleportWithEffects(executor, p2, p2X, p2Y, p2Z, p1X, p1Y, p1Z);
 
         applyNegativeEffects(p1);
         applyNegativeEffects(p2);
@@ -124,8 +129,12 @@ public class PlayerSwap extends Wildcard {
         ServerPlayerEntity executor = PlayerUtils.getPlayer("Talis04");
         if (executor == null) return;
 
-        teleportWithEffects(executor, player, player.getX(), player.getY(), player.getZ(), mob.getX(), mob.getY(), mob.getZ());
-        teleportWithEffects(executor, mob, mob.getX(), mob.getY(), mob.getZ(), player.getX(), player.getY(), player.getZ());
+        // Store original positions
+        double playerX = player.getX(), playerY = player.getY(), playerZ = player.getZ();
+        double mobX = mob.getX(), mobY = mob.getY(), mobZ = mob.getZ();
+
+        teleportWithEffects(executor, player, playerX, playerY, playerZ, mobX, mobY, mobZ);
+        teleportWithEffects(executor, mob, mobX, mobY, mobZ, playerX, playerY, playerZ);
 
         applyNegativeEffects(player);
     }
@@ -136,48 +145,60 @@ public class PlayerSwap extends Wildcard {
                                      double newX, double newY, double newZ) {
 
         String target;
+        ServerWorld world;
 
         if (entity instanceof ServerPlayerEntity playerEntity) {
             target = playerEntity.getName().getString();
-            ServerWorld world = (ServerWorld) playerEntity.getWorld();
-
-            // Play effects at OLD location BEFORE teleporting
-            playParticlesAndSoundAtLocation(world, oldX, oldY, oldZ);
-
-            // Teleport the player
-            executor.getServer().getCommandManager().executeWithPrefix(
-                    executor.getCommandSource(),
-                    "tp " + target + " " + newX + " " + newY + " " + newZ
-            );
-
-            // Play effects at NEW location AFTER teleporting
-            playParticlesAndSoundAtLocation(world, newX, newY, newZ);
-
+            world = (ServerWorld) playerEntity.getWorld();
         } else if (entity instanceof MobEntity mobEntity) {
             target = mobEntity.getUuidAsString();
-            ServerWorld world = (ServerWorld) mobEntity.getWorld();
-
-            // Play effects at OLD location BEFORE teleporting
-            playParticlesAndSoundAtLocation(world, oldX, oldY, oldZ);
-
-            // Teleport the mob
-            executor.getServer().getCommandManager().executeWithPrefix(
-                    executor.getCommandSource(),
-                    "tp " + target + " " + newX + " " + newY + " " + newZ
-            );
-
-            // Play effects at NEW location AFTER teleporting
-            playParticlesAndSoundAtLocation(world, newX, newY, newZ);
+            world = (ServerWorld) mobEntity.getWorld();
+        } else {
+            return; // Invalid entity type
         }
+
+        // Play effects at OLD location BEFORE teleporting
+        playParticlesAndSoundAtLocation(world, oldX, oldY, oldZ);
+
+        // Teleport the entity
+        executor.getServer().getCommandManager().executeWithPrefix(
+                executor.getCommandSource(),
+                "tp " + target + " " + newX + " " + newY + " " + newZ
+        );
+
+        // Schedule effects at NEW location to play after a short delay (5 ticks = 0.25 seconds)
+        MinecraftServer server = executor.getServer();
+        server.execute(() -> {
+            // Use a task scheduler to delay the new location effects
+            scheduleTask(server, () -> {
+                playParticlesAndSoundAtLocation(world, newX, newY, newZ);
+            }, 5); // 5 tick delay
+        });
+    }
+
+    /** Schedule a task to run after a specified number of ticks */
+    private void scheduleTask(MinecraftServer server, Runnable task, int delayTicks) {
+        new Thread(() -> {
+            try {
+                Thread.sleep(delayTicks * 50); // 50ms per tick
+                server.execute(task);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }).start();
     }
 
     /** Unified method to play particles and sound at any location */
     private void playParticlesAndSoundAtLocation(ServerWorld world, double x, double y, double z) {
-        // Spawn particles
-        world.spawnParticles(ParticleTypes.PORTAL, x, y + 1, z, 30, 0.5, 1, 0.5, 0.1);
-        
-        // Play sound that can be heard by nearby players
-        world.playSound(null, x, y, z, SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1.0F, 1.0F);
+        try {
+            // Spawn particles
+            world.spawnParticles(ParticleTypes.PORTAL, x, y + 1, z, 30, 0.5, 1, 0.5, 0.1);
+            
+            // Play sound that can be heard by nearby players
+            world.playSound(null, x, y, z, SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1.0F, 1.0F);
+        } catch (Exception e) {
+            // Fail silently if world is unloaded or there's any other issue
+        }
     }
 
     private MobEntity getNearestMob(ServerPlayerEntity player, double radius) {
