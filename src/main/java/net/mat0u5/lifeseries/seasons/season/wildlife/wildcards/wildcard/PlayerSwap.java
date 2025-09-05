@@ -147,17 +147,17 @@ public class PlayerSwap extends Wildcard {
             return; // Unknown entity type
         }
 
-        // Play teleport effects at the old location
-        playTeleportEffects(world, oldX, oldY, oldZ);
-
-        // Play teleport effects at the new location
-        playTeleportEffects(world, newX, newY, newZ);
-
         // Perform teleport
         executor.getServer().getCommandManager().executeWithPrefix(
                 executor.getCommandSource(),
                 "tp " + target + " " + newX + " " + newY + " " + newZ
         );
+
+                // Play teleport effects at the old location
+        playTeleportEffects(world, oldX, oldY, oldZ);
+
+        // Play teleport effects at the new location
+        playTeleportEffects(world, newX, newY, newZ);
     }
 
     private MobEntity getNearestMob(ServerPlayerEntity player, double radius) {
