@@ -58,12 +58,12 @@ public class PlayerSwap extends Wildcard {
 
             int minDelay, maxDelay;
 
-            // First hour: gradually decreasing 6–10 min ? 2–6 min
+            // First hour: gradually decreasing 6â€“10 min â†’ 2â€“6 min
             if (tickCounter < 60 * 60 * TICKS_PER_SECOND) {
                 double progress = (double) tickCounter / (60 * 60 * TICKS_PER_SECOND);
                 minDelay = (int) lerp(6 * 60 * TICKS_PER_SECOND, 2 * 60 * TICKS_PER_SECOND, progress);
                 maxDelay = (int) lerp(10 * 60 * TICKS_PER_SECOND, 6 * 60 * TICKS_PER_SECOND, progress);
-            } else { // After first hour: always 2–6 min
+            } else { // After first hour: always 2â€“6 min
                 minDelay = 2 * 60 * TICKS_PER_SECOND;
                 maxDelay = 6 * 60 * TICKS_PER_SECOND;
             }

@@ -74,7 +74,7 @@ public class FloorIsLava extends Wildcard {
         if (players != null) {
             for (ServerPlayerEntity player : players) {
                 if (player != null) {
-                    player.sendMessage(Text.literal("§cFloor is Lava wildcard has been activated!"), false);
+                    player.sendMessage(Text.literal("Â§cFloor is Lava wildcard has been activated!"), false);
                 }
             }
         }
@@ -91,7 +91,7 @@ public class FloorIsLava extends Wildcard {
         if (players != null) {
             for (ServerPlayerEntity player : players) {
                 if (player != null) {
-                    player.sendMessage(Text.literal("§aFloor is Lava wildcard has been deactivated!"), false);
+                    player.sendMessage(Text.literal("Â§aFloor is Lava wildcard has been deactivated!"), false);
                 }
             }
         }
@@ -146,7 +146,7 @@ public class FloorIsLava extends Wildcard {
         
         // Debug: Send message to player about what block they're standing on
         Block blockBelow = player.getWorld().getBlockState(playerPos.down()).getBlock();
-        player.sendMessage(Text.literal("§7Debug: Standing on " + blockBelow.getName().getString() + 
+        player.sendMessage(Text.literal("Â§7Debug: Standing on " + blockBelow.getName().getString() + 
             " | Natural: " + standingOnNaturalBlock + " | On Ground: " + player.isOnGround()), true);
         
         if (standingOnNaturalBlock) {
@@ -186,7 +186,7 @@ public class FloorIsLava extends Wildcard {
             lastEffectTick.put(playerId, tickCounter);
             
             // Send message to player for debugging
-            player.sendMessage(Text.literal("§c§lOUCH! The " + block.getName().getString() + 
+            player.sendMessage(Text.literal("Â§cÂ§lOUCH! The " + block.getName().getString() + 
                 " burns your feet!"), true);
         }
     }
