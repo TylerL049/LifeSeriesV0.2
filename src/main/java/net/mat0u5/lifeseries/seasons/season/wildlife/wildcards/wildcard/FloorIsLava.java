@@ -12,7 +12,7 @@ import net.minecraft.server.world.ServerWorld;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.tag.TagKey;
 import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.Registry;
+import net.minecraft.registry.RegistryKey;
 import net.minecraft.util.Identifier;
 
 import java.util.List;
@@ -22,10 +22,10 @@ public class FloorIsLava extends Wildcard {
     private boolean active = false;
     private static final int TICKS_PER_SECOND = 20;
 
-    /** Reference the custom tag we created: lifeseries:natural_blocks */
+    /** Reference the custom tag: lifeseries:natural_blocks */
     private static final TagKey<Block> NATURAL_BLOCKS_TAG = TagKey.of(
             RegistryKeys.BLOCK,
-            Registry.makeKey(RegistryKeys.BLOCK, new Identifier("lifeseries", "natural_blocks"))
+            RegistryKey.of(RegistryKeys.BLOCK, new Identifier("lifeseries", "natural_blocks"))
     );
 
     @Override
@@ -51,11 +51,15 @@ public class FloorIsLava extends Wildcard {
         for (ServerPlayerEntity player : players) {
             if (player.isSpectator()) continue;
 
-            // Check the block just below the player's feet
-            BlockPos posBelow = new BlockPos(player.getX(), player.getY() - 0.1, player.getZ());
-            Block blockBelow = player.getWorld().getBlockState(posBelow).getBlock();
+            // BlockPos requires integers
+            BlockPos posBelow = new BlockPos(
+                    Math.floor(player.getX()),
+                    Math.floor(player.getY() - 0.1),
+                    Math.floor(player.getZ())
+            );
 
-            if (blockBelow != null && blockBelow.isIn(NATURAL_BLOCKS_TAG)) {
+            // Check block against tag
+            if (player.getWorld().getBlockState(posBelow).isIn(NATURAL_BLOCKS_TAG)) {
                 applyWither(player);
                 spawnLavaParticles(player);
             }
@@ -66,11 +70,11 @@ public class FloorIsLava extends Wildcard {
     private void applyWither(ServerPlayerEntity player) {
         StatusEffectInstance wither = new StatusEffectInstance(
                 StatusEffects.WITHER,
-                5,  // 5 ticks = 0.25s, refreshes each tick
+                5,  // 5 ticks = 0.25s
                 1,
-                true,   // show particles
-                true,   // show icon
-                true    // ambient effect
+                true,
+                true,
+                true
         );
         player.addStatusEffect(wither);
     }
@@ -81,10 +85,10 @@ public class FloorIsLava extends Wildcard {
             serverWorld.spawnParticles(
                     ParticleTypes.PORTAL,
                     player.getX(),
-                    player.getY() + 1.0,  // slightly above the player
+                    player.getY() + 1.0,
                     player.getZ(),
-                    10,      // number of particles
-                    0.3, 0.5, 0.3,  // x, y, z offsets
+                    10,      // particle count
+                    0.3, 0.5, 0.3, // x, y, z offsets
                     0.05     // speed
             );
         }
