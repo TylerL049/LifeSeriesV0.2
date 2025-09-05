@@ -89,7 +89,7 @@ public class WildcardManager {
         if (index == 7) activeWildcards.put(Wildcards.GRAVITY_MANIPULATION, new GravityManipulation());
         if (index == 8) activeWildcards.put(Wildcards.HOT_POTATO, new HotPotato());
         if (index == 9) activeWildcards.put(Wildcards.PLAYER_SWAP, new PlayerSwap());
-        if (index == 10) activeWildcards.put(Wildcards.FLOOR_IS_LAVA, new FloorIsLava());
+        if (index == 10) activeWildcards.put(Wildcards.FLOOR_LAVA, new FloorLava());
     }
 
     public static void onPlayerJoin(ServerPlayerEntity player) {
@@ -205,11 +205,11 @@ public class WildcardManager {
 
     public static void tick() {
         if (server != null && server.getTicks() % 100 == 0) { // Every 5 seconds
-            System.out.println("WildcardManager.tick() - Active wildcards: " + activeWildcards.size() + " - CONSOLE DEBUG");
-            for (Wildcards type : activeWildcards.keySet()) {
-                System.out.println("  - " + type + " (active: " + activeWildcards.get(type).active + ") - CONSOLE DEBUG");
-            }
+        System.out.println("WildcardManager.tick() - Active wildcards: " + activeWildcards.size() + " - CONSOLE DEBUG");
+        for (Wildcards type : activeWildcards.keySet()) {
+            System.out.println("  - " + type + " (active: " + activeWildcards.get(type).active + ") - CONSOLE DEBUG");
         }
+    }
 
 
         SuperpowersWildcard.onTick();
