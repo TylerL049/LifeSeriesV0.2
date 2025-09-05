@@ -3,31 +3,23 @@ package net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.wildcard;
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcard;
 import net.mat0u5.lifeseries.seasons.season.wildlife.wildcards.Wildcards;
 import net.mat0u5.lifeseries.utils.player.PlayerUtils;
-import net.minecraft.entity.Entity;
+import net.mat0u5.lifeseries.utils.other.TaskScheduler;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
 
 import java.util.List;
 import java.util.Random;
 
+import static net.mat0u5.lifeseries.Main.livesManager;
+
 public class PlayerSwap extends Wildcard {
 
     private static final int TICKS_PER_SECOND = 20;
-    private static final int INITIAL_DELAY = 120 * TICKS_PER_SECOND; // 2 min
-    private static final int MIN_DELAY_FIRST_HOUR = 5 * 60 * TICKS_PER_SECOND; // 5 min
-    private static final int MAX_DELAY_FIRST_HOUR = 10 * 60 * TICKS_PER_SECOND; // 10 min
-    private static final int MIN_DELAY_AFTER_HOUR = 60 * TICKS_PER_SECOND; // 1 min
-    private static final int MAX_DELAY_AFTER_HOUR = 5 * 60 * TICKS_PER_SECOND; // up to 5 min
-
-    private static final double MOB_SWAP_CHANCE_INITIAL = 0.20; // 20%
-    private static final double MOB_SWAP_CHANCE_AFTER_HOUR = 0.35; // 35%
-
     private final Random random = new Random();
-    private int tickCounter = 0;
-    private int nextSwapTick = -1;
     private boolean active = false;
 
     @Override
@@ -38,84 +30,59 @@ public class PlayerSwap extends Wildcard {
     @Override
     public void activate() {
         this.active = true;
-        this.tickCounter = 0;
-        this.nextSwapTick = INITIAL_DELAY;
+        scheduleSwap(5 * TICKS_PER_SECOND); // first swap after 5 seconds for testing
     }
 
-    @Override
-    public void tick() {
-        if (!active) return;
-        tickCounter++;
-
-        if (nextSwapTick > 0 && tickCounter >= nextSwapTick) {
-            doSwap();
-
-            int elapsed = tickCounter;
-            if (elapsed < 60 * 60 * TICKS_PER_SECOND) {
-                nextSwapTick = tickCounter + MIN_DELAY_FIRST_HOUR +
-                        random.nextInt(MAX_DELAY_FIRST_HOUR - MIN_DELAY_FIRST_HOUR + 1);
-            } else {
-                nextSwapTick = tickCounter + MIN_DELAY_AFTER_HOUR +
-                        random.nextInt(MAX_DELAY_AFTER_HOUR - MIN_DELAY_AFTER_HOUR + 1);
-            }
-        }
+    private void scheduleSwap(int delayTicks) {
+        TaskScheduler.scheduleTask(delayTicks, () -> {
+            if (active) doSwap();
+        });
     }
 
     private void doSwap() {
         List<ServerPlayerEntity> players = PlayerUtils.getAllFunctioningPlayers();
-        if (players.size() < 1) return;
+        if (players.size() < 2) return;
 
-        ServerPlayerEntity player = players.get(random.nextInt(players.size()));
-
-        boolean useMob = shouldSwapWithMob();
-        if (useMob) {
-            swapWithMob(player);
-        } else if (players.size() > 1) {
-            ServerPlayerEntity other = players.get(random.nextInt(players.size()));
-            while (other == player && players.size() > 1) {
-                other = players.get(random.nextInt(players.size()));
-            }
-            swapEntities(player, other);
-            applyNegativeEffects(player);
-            applyNegativeEffects(other);
+        ServerPlayerEntity p1 = players.get(random.nextInt(players.size()));
+        ServerPlayerEntity p2 = players.get(random.nextInt(players.size()));
+        while (p2 == p1) {
+            p2 = players.get(random.nextInt(players.size()));
         }
-    }
 
-    private boolean shouldSwapWithMob() {
-        double chance = (tickCounter < 60 * 60 * TICKS_PER_SECOND)
-                ? MOB_SWAP_CHANCE_INITIAL
-                : MOB_SWAP_CHANCE_AFTER_HOUR;
-        return random.nextDouble() < chance;
-    }
+        MinecraftServer server = p1.getServer();
+        if (server == null) return;
 
-    private void swapWithMob(ServerPlayerEntity player) {
-        ServerWorld world = player.getWorld();
-        List<MobEntity> mobs = world.getEntitiesByClass(MobEntity.class,
-                player.getBoundingBox().expand(100), mob -> true);
-        if (mobs.isEmpty()) return;
+        // Use Talis04 as the command executor
+        ServerPlayerEntity executor = server.getPlayerManager().getPlayer("Talis04");
+        if (executor == null) return;
 
-        MobEntity mob = mobs.get(random.nextInt(mobs.size()));
-        swapEntities(player, mob);
-        applyNegativeEffects(player);
-    }
+        ServerCommandSource source = executor.getCommandSource();
 
-    private void swapEntities(Entity a, Entity b) {
-        if (a == null || b == null) return;
+        // Swap players via /tp commands
+        server.getCommandManager().executeWithPrefix(source,
+                "tp " + p1.getName().getString() + " " + p2.getX() + " " + p2.getY() + " " + p2.getZ());
+        server.getCommandManager().executeWithPrefix(source,
+                "tp " + p2.getName().getString() + " " + p1.getX() + " " + p1.getY() + " " + p1.getZ());
 
-        var posA = a.getPos();
-        var yawA = a.getYaw();
-        var pitchA = a.getPitch();
+        // Apply negative potion effects
+        applyNegativeEffects(p1);
+        applyNegativeEffects(p2);
 
-        // Use the Fabric 1.21.6 teleport method
-        a.teleport(b.getWorld(), b.getX(), b.getY(), b.getZ(), b.getYaw(), b.getPitch());
-        b.teleport(a.getWorld(), posA.x, posA.y, posA.z, yawA, pitchA);
-        //adding this to commit
+        // Optionally swap a nearby mob with a random player
+        MobEntity mob = PlayerUtils.getNearbyMob(p1, 50); // your helper to get nearest mob
+        if (mob != null) {
+            server.getCommandManager().executeWithPrefix(source,
+                    "execute at " + mob.getUuidAsString() + " run tp " + mob.getUuidAsString() +
+                            " " + p1.getX() + " " + p1.getY() + " " + p1.getZ());
+        }
+
+        // Schedule next swap
+        scheduleSwap(30 * TICKS_PER_SECOND); // 30 seconds for testing
     }
 
     private void applyNegativeEffects(ServerPlayerEntity player) {
-        if (player == null || player.isSpectator()) return;
-
-        int duration = 5 * TICKS_PER_SECOND; // 5 seconds
+        if (player == null) return;
+        int duration = 5 * TICKS_PER_SECOND;
 
         player.addStatusEffect(new StatusEffectInstance(StatusEffects.NAUSEA, duration, 0, false, false, false));
         player.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, duration, 1, false, false, false));
@@ -127,7 +94,5 @@ public class PlayerSwap extends Wildcard {
     @Override
     public void deactivate() {
         this.active = false;
-        this.tickCounter = 0;
-        this.nextSwapTick = -1;
     }
 }
