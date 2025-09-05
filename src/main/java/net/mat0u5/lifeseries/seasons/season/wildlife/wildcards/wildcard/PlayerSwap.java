@@ -200,14 +200,15 @@ public class PlayerSwap extends Wildcard {
             double y = player.getY();
             double z = player.getZ();
             world.spawnParticles(ParticleTypes.PORTAL, x, y + 1, z, 30, 0.5, 1, 0.5, 0.1);
-            player.playSound(SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1.0F, 1.0F);
+            // player hears it directly
+            player.playSound(SoundEvents.ENTITY_ENDERMAN_TELEPORT, 1.0F, 1.0F);
         } else if (entity instanceof MobEntity mob) {
             ServerWorld world = (ServerWorld) mob.getWorld();
             double x = mob.getX();
             double y = mob.getY();
             double z = mob.getZ();
             world.spawnParticles(ParticleTypes.PORTAL, x, y + 1, z, 30, 0.5, 1, 0.5, 0.1);
-            // optional: play sound to nearby players
+            // nearby players hear it
             world.playSound(null, x, y, z, SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1.0F, 1.0F);
         }
     }
