@@ -27,9 +27,9 @@ public class FloorLava extends Wildcard {
     private int tickCounter = 0;
 
     private final Map<UUID, Integer> lastEffectTick = new HashMap<>();
-    private static final int EFFECT_COOLDOWN_TICKS = 4; // very short, reapplied every tick on contact
+    private static final int EFFECT_COOLDOWN_TICKS = 4;
 
-    private static final Set<Block> NATURAL_BLOCKS = Set.of(
+    private static final Set<Block> DAMAGING_BLOCKS = Set.of(
             Blocks.GRASS_BLOCK,
             Blocks.DIRT,
             Blocks.STONE,
@@ -110,10 +110,19 @@ public class FloorLava extends Wildcard {
     }
 
     private void checkPlayerPosition(ServerPlayerEntity player) {
-        BlockPos blockBelow = player.getBlockPos().down();
-        Block block = player.getWorld().getBlockState(blockBelow).getBlock();
+        BlockPos feetPos = player.getBlockPos();
+        BlockPos blockBelow = feetPos.down();
+        BlockPos blockAbove = feetPos.up();
 
-        if (NATURAL_BLOCKS.contains(block)) {
+        Block blockAtFeet = player.getWorld().getBlockState(feetPos).getBlock();
+        Block blockUnder = player.getWorld().getBlockState(blockBelow).getBlock();
+        Block blockOver = player.getWorld().getBlockState(blockAbove).getBlock();
+
+        boolean damaging = DAMAGING_BLOCKS.contains(blockAtFeet)
+                || DAMAGING_BLOCKS.contains(blockUnder)
+                || DAMAGING_BLOCKS.contains(blockOver);
+
+        if (damaging) {
             applyWitherEffect(player);
             spawnParticles(player);
             playSound(player);
@@ -130,8 +139,8 @@ public class FloorLava extends Wildcard {
 
         StatusEffectInstance witherEffect = new StatusEffectInstance(
                 StatusEffects.WITHER,
-                2, // 2 ticks, will refresh if standing on block
-                1, // level 2 Wither (amplifier 1)
+                20,
+                10,
                 false,
                 true,
                 true
