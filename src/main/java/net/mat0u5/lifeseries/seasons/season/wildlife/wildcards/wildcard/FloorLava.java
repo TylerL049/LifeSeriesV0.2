@@ -8,12 +8,11 @@ import net.minecraft.block.Blocks;
 import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.math.BlockPos;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.particle.ParticleTypes;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.sound.SoundCategory;
-import net.minecraft.text.Text;
+import net.minecraft.sound.SoundEvents;
 
 import java.util.HashMap;
 import java.util.List;
@@ -66,15 +65,6 @@ public class FloorLava extends Wildcard {
         super.activate();
         tickCounter = 0;
         lastEffectTick.clear();
-
-        List<ServerPlayerEntity> players = PlayerUtils.getAllFunctioningPlayers();
-        if (players != null) {
-            for (ServerPlayerEntity player : players) {
-                if (player != null) {
-                    player.sendMessage(Text.literal("§cFloor is Lava wildcard has been activated!"), false);
-                }
-            }
-        }
     }
 
     @Override
@@ -82,15 +72,6 @@ public class FloorLava extends Wildcard {
         super.deactivate();
         tickCounter = 0;
         lastEffectTick.clear();
-
-        List<ServerPlayerEntity> players = PlayerUtils.getAllFunctioningPlayers();
-        if (players != null) {
-            for (ServerPlayerEntity player : players) {
-                if (player != null) {
-                    player.sendMessage(Text.literal("§aFloor is Lava wildcard has been deactivated!"), false);
-                }
-            }
-        }
     }
 
     @Override
@@ -110,17 +91,14 @@ public class FloorLava extends Wildcard {
     }
 
     private void checkPlayerPosition(ServerPlayerEntity player) {
-        BlockPos feetPos = player.getBlockPos();
-        BlockPos blockBelow = feetPos.down();
-        BlockPos blockAbove = feetPos.up();
+        double footY = player.getY();
+        BlockPos posAtFeet = new BlockPos(player.getX(), footY, player.getZ());
+        BlockPos posBelow = posAtFeet.down();
 
-        Block blockAtFeet = player.getWorld().getBlockState(feetPos).getBlock();
-        Block blockUnder = player.getWorld().getBlockState(blockBelow).getBlock();
-        Block blockOver = player.getWorld().getBlockState(blockAbove).getBlock();
+        Block blockAtFeet = player.getWorld().getBlockState(posAtFeet).getBlock();
+        Block blockBelow = player.getWorld().getBlockState(posBelow).getBlock();
 
-        boolean damaging = DAMAGING_BLOCKS.contains(blockAtFeet)
-                || DAMAGING_BLOCKS.contains(blockUnder)
-                || DAMAGING_BLOCKS.contains(blockOver);
+        boolean damaging = DAMAGING_BLOCKS.contains(blockAtFeet) || DAMAGING_BLOCKS.contains(blockBelow);
 
         if (damaging) {
             applyWitherEffect(player);
@@ -140,75 +118,33 @@ public class FloorLava extends Wildcard {
         StatusEffectInstance witherEffect = new StatusEffectInstance(
                 StatusEffects.WITHER,
                 20,
-                10,
+                50,
                 false,
                 true,
                 true
         );
 
-        boolean applied = player.addStatusEffect(witherEffect);
-        if (applied) lastEffectTick.put(playerId, tickCounter);
+        if (player.addStatusEffect(witherEffect)) {
+            lastEffectTick.put(playerId, tickCounter);
+        }
     }
 
     private void spawnParticles(ServerPlayerEntity player) {
         if (!(player.getWorld() instanceof ServerWorld serverWorld)) return;
 
-        serverWorld.spawnParticles(
-                ParticleTypes.SMOKE,
-                player.getX(),
-                player.getY() + 0.1,
-                player.getZ(),
-                10,
-                0.3,
-                0.1,
-                0.3,
-                0.02
-        );
-
-        serverWorld.spawnParticles(
-                ParticleTypes.FLAME,
-                player.getX(),
-                player.getY() + 0.1,
-                player.getZ(),
-                5,
-                0.2, 0.05, 0.2,
-                0.01
-        );
-
-        serverWorld.spawnParticles(
-                ParticleTypes.LAVA,
-                player.getX(),
-                player.getY() + 0.1,
-                player.getZ(),
-                2,
-                0.1, 0.05, 0.1,
-                0.01
-        );
+        serverWorld.spawnParticles(ParticleTypes.SMOKE, player.getX(), player.getY() + 0.1, player.getZ(), 10, 0.3, 0.1, 0.3, 0.02);
+        serverWorld.spawnParticles(ParticleTypes.FLAME, player.getX(), player.getY() + 0.1, player.getZ(), 5, 0.2, 0.05, 0.2, 0.01);
+        serverWorld.spawnParticles(ParticleTypes.LAVA, player.getX(), player.getY() + 0.1, player.getZ(), 2, 0.1, 0.05, 0.1, 0.01);
     }
 
     private void playSound(ServerPlayerEntity player) {
         if (!(player.getWorld() instanceof ServerWorld serverWorld)) return;
 
-        serverWorld.playSound(
-                null,
-                player.getX(),
-                player.getY(),
-                player.getZ(),
-                SoundEvents.BLOCK_FIRE_AMBIENT,
-                SoundCategory.PLAYERS,
-                0.7F,
-                1.0F + (float)(Math.random() * 0.4 - 0.2)
-        );
+        serverWorld.playSound(null, player.getX(), player.getY(), player.getZ(),
+                SoundEvents.BLOCK_FIRE_AMBIENT, SoundCategory.PLAYERS, 0.7F,
+                1.0F + (float)(Math.random() * 0.4 - 0.2));
 
-        serverWorld.playSound(
-                null,
-                player.getX(),
-                player.getY(),
-                player.getZ(),
-                SoundEvents.BLOCK_LAVA_EXTINGUISH,
-                SoundCategory.PLAYERS,
-                0.3F,
-                1.5F
-        );
+        serverWorld.playSound(null, player.getX(), player.getY(), player.getZ(),
+                SoundEvents.BLOCK_LAVA_EXTINGUISH, SoundCategory.PLAYERS, 0.3F, 1.5F);
     }
 }
