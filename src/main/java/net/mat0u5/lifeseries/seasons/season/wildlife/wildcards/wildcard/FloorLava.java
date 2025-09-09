@@ -91,14 +91,13 @@ public class FloorLava extends Wildcard {
     }
 
     private void checkPlayerPosition(ServerPlayerEntity player) {
-        double footY = player.getY();
-        BlockPos posAtFeet = new BlockPos(player.getX(), footY, player.getZ());
-        BlockPos posBelow = posAtFeet.down();
+        BlockPos blockBelow = player.getBlockPos();
+        BlockPos blockAbove = blockBelow.up();
 
-        Block blockAtFeet = player.getWorld().getBlockState(posAtFeet).getBlock();
-        Block blockBelow = player.getWorld().getBlockState(posBelow).getBlock();
+        Block blockAtFeet = player.getWorld().getBlockState(blockBelow).getBlock();
+        Block blockAboveFeet = player.getWorld().getBlockState(blockAbove).getBlock();
 
-        boolean damaging = DAMAGING_BLOCKS.contains(blockAtFeet) || DAMAGING_BLOCKS.contains(blockBelow);
+        boolean damaging = DAMAGING_BLOCKS.contains(blockAtFeet) || DAMAGING_BLOCKS.contains(blockAboveFeet);
 
         if (damaging) {
             applyWitherEffect(player);
@@ -117,7 +116,7 @@ public class FloorLava extends Wildcard {
 
         StatusEffectInstance witherEffect = new StatusEffectInstance(
                 StatusEffects.WITHER,
-                20,
+                30,
                 50,
                 false,
                 true,
