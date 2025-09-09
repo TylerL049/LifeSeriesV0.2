@@ -27,7 +27,7 @@ public class FloorLava extends Wildcard {
     private int tickCounter = 0;
 
     private final Map<UUID, Integer> lastEffectTick = new HashMap<>();
-    private static final int EFFECT_COOLDOWN_TICKS = 40;
+    private static final int EFFECT_COOLDOWN_TICKS = 4; // very short, reapplied every tick on contact
 
     private static final Set<Block> NATURAL_BLOCKS = Set.of(
             Blocks.GRASS_BLOCK,
@@ -64,8 +64,8 @@ public class FloorLava extends Wildcard {
     @Override
     public void activate() {
         super.activate();
-        this.tickCounter = 0;
-        this.lastEffectTick.clear();
+        tickCounter = 0;
+        lastEffectTick.clear();
 
         List<ServerPlayerEntity> players = PlayerUtils.getAllFunctioningPlayers();
         if (players != null) {
@@ -80,8 +80,8 @@ public class FloorLava extends Wildcard {
     @Override
     public void deactivate() {
         super.deactivate();
-        this.tickCounter = 0;
-        this.lastEffectTick.clear();
+        tickCounter = 0;
+        lastEffectTick.clear();
 
         List<ServerPlayerEntity> players = PlayerUtils.getAllFunctioningPlayers();
         if (players != null) {
@@ -110,129 +110,96 @@ public class FloorLava extends Wildcard {
     }
 
     private void checkPlayerPosition(ServerPlayerEntity player) {
-        BlockPos playerPos = player.getBlockPos();
+        BlockPos blockBelow = player.getBlockPos().down();
+        Block block = player.getWorld().getBlockState(blockBelow).getBlock();
 
-        BlockPos[] positionsToCheck = {
-                playerPos.down(),
-                playerPos.down(2),
-                playerPos,
-                playerPos.add(0, -1, 0)
-        };
-
-        boolean standingOnNaturalBlock = false;
-        Block foundBlock = null;
-
-        for (BlockPos pos : positionsToCheck) {
-            Block block = player.getWorld().getBlockState(pos).getBlock();
-            if (NATURAL_BLOCKS.contains(block)) {
-                standingOnNaturalBlock = true;
-                foundBlock = block;
-                break;
-            }
-        }
-
-        if (standingOnNaturalBlock) {
-            applyWitherEffect(player, foundBlock);
+        if (NATURAL_BLOCKS.contains(block)) {
+            applyWitherEffect(player);
             spawnParticles(player);
             playSound(player);
         }
     }
 
-    private void applyWitherEffect(ServerPlayerEntity player, Block block) {
+    private void applyWitherEffect(ServerPlayerEntity player) {
         UUID playerId = player.getUuid();
 
         if (lastEffectTick.containsKey(playerId)) {
             int lastTick = lastEffectTick.get(playerId);
-            if (tickCounter - lastTick < EFFECT_COOLDOWN_TICKS) {
-                return;
-            }
+            if (tickCounter - lastTick < EFFECT_COOLDOWN_TICKS) return;
         }
 
         StatusEffectInstance witherEffect = new StatusEffectInstance(
                 StatusEffects.WITHER,
-                4 * TICKS_PER_SECOND,
-                0,
+                2, // 2 ticks, will refresh if standing on block
+                1, // level 2 Wither (amplifier 1)
                 false,
                 true,
                 true
         );
 
         boolean applied = player.addStatusEffect(witherEffect);
-
-        if (applied) {
-            lastEffectTick.put(playerId, tickCounter);
-            player.sendMessage(Text.literal("§c§lOUCH! The " + block.getName().getString() +
-                    " burns your feet!"), true);
-        }
+        if (applied) lastEffectTick.put(playerId, tickCounter);
     }
 
     private void spawnParticles(ServerPlayerEntity player) {
         if (!(player.getWorld() instanceof ServerWorld serverWorld)) return;
 
-        try {
-            serverWorld.spawnParticles(
-                    ParticleTypes.SMOKE,
-                    player.getX(),
-                    player.getY() + 0.1,
-                    player.getZ(),
-                    20,
-                    0.5,
-                    0.2,
-                    0.5,
-                    0.05
-            );
+        serverWorld.spawnParticles(
+                ParticleTypes.SMOKE,
+                player.getX(),
+                player.getY() + 0.1,
+                player.getZ(),
+                10,
+                0.3,
+                0.1,
+                0.3,
+                0.02
+        );
 
-            serverWorld.spawnParticles(
-                    ParticleTypes.FLAME,
-                    player.getX(),
-                    player.getY() + 0.1,
-                    player.getZ(),
-                    8,
-                    0.3, 0.1, 0.3,
-                    0.02
-            );
+        serverWorld.spawnParticles(
+                ParticleTypes.FLAME,
+                player.getX(),
+                player.getY() + 0.1,
+                player.getZ(),
+                5,
+                0.2, 0.05, 0.2,
+                0.01
+        );
 
-            serverWorld.spawnParticles(
-                    ParticleTypes.LAVA,
-                    player.getX(),
-                    player.getY() + 0.1,
-                    player.getZ(),
-                    3,
-                    0.2, 0.1, 0.2,
-                    0.01
-            );
-        } catch (Exception e) {
-            System.err.println("Error spawning particles for FloorIsLava: " + e.getMessage());
-        }
+        serverWorld.spawnParticles(
+                ParticleTypes.LAVA,
+                player.getX(),
+                player.getY() + 0.1,
+                player.getZ(),
+                2,
+                0.1, 0.05, 0.1,
+                0.01
+        );
     }
 
     private void playSound(ServerPlayerEntity player) {
         if (!(player.getWorld() instanceof ServerWorld serverWorld)) return;
 
-        try {
-            serverWorld.playSound(
-                    null,
-                    player.getX(),
-                    player.getY(),
-                    player.getZ(),
-                    SoundEvents.BLOCK_FIRE_AMBIENT,
-                    SoundCategory.PLAYERS,
-                    0.7F,
-                    1.0F + (float)(Math.random() * 0.4 - 0.2)
-            );
+        serverWorld.playSound(
+                null,
+                player.getX(),
+                player.getY(),
+                player.getZ(),
+                SoundEvents.BLOCK_FIRE_AMBIENT,
+                SoundCategory.PLAYERS,
+                0.7F,
+                1.0F + (float)(Math.random() * 0.4 - 0.2)
+        );
 
-            serverWorld.playSound(
-                    null,
-                    player.getX(),
-                    player.getY(),
-                    player.getZ(),
-                    SoundEvents.BLOCK_LAVA_EXTINGUISH,
-                    SoundCategory.PLAYERS,
-                    0.3F,
-                    1.5F
-            );
-        } catch (Exception e) {
-            System.err.println("Error playing sound for FloorIsLava: " + e.getMessage());
-        }
+        serverWorld.playSound(
+                null,
+                player.getX(),
+                player.getY(),
+                player.getZ(),
+                SoundEvents.BLOCK_LAVA_EXTINGUISH,
+                SoundCategory.PLAYERS,
+                0.3F,
+                1.5F
+        );
     }
 }
