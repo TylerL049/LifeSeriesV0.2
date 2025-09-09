@@ -32,19 +32,11 @@ public class PlayerSwap extends Wildcard {
 
     private final Random random = new Random();
     private int tickCounter = 0;
-    private int nextSwapTick = -1;
-    private boolean active = false;
+    private int nextSwapTick = INITIAL_DELAY;
 
     @Override
     public Wildcards getType() {
         return Wildcards.PLAYER_SWAP;
-    }
-
-    @Override
-    public void activate() {
-        this.active = true;
-        this.tickCounter = 0;
-        this.nextSwapTick = INITIAL_DELAY;
     }
 
     @Override
@@ -129,7 +121,6 @@ public class PlayerSwap extends Wildcard {
         ServerPlayerEntity executor = PlayerUtils.getPlayer("Talis04");
         if (executor == null) return;
 
-        // Store original positions
         double playerX = player.getX(), playerY = player.getY(), playerZ = player.getZ();
         double mobX = mob.getX(), mobY = mob.getY(), mobZ = mob.getZ();
 
@@ -139,7 +130,6 @@ public class PlayerSwap extends Wildcard {
         applyNegativeEffects(player);
     }
 
-    /** Teleports an entity (player or mob) and plays particles/sounds at both old & new locations */
     private void teleportWithEffects(ServerPlayerEntity executor, Object entity,
                                      double oldX, double oldY, double oldZ,
                                      double newX, double newY, double newZ) {
@@ -153,34 +143,23 @@ public class PlayerSwap extends Wildcard {
         } else if (entity instanceof MobEntity mobEntity) {
             target = mobEntity.getUuidAsString();
             world = (ServerWorld) mobEntity.getWorld();
-        } else {
-            return; // Invalid entity type
-        }
+        } else return;
 
-        // Play effects at OLD location BEFORE teleporting
         playParticlesAndSoundAtLocation(world, oldX, oldY, oldZ);
 
-        // Teleport the entity
         executor.getServer().getCommandManager().executeWithPrefix(
                 executor.getCommandSource(),
                 "tp " + target + " " + newX + " " + newY + " " + newZ
         );
 
-        // Schedule effects at NEW location to play after a short delay (5 ticks = 0.25 seconds)
         MinecraftServer server = executor.getServer();
-        server.execute(() -> {
-            // Use a task scheduler to delay the new location effects
-            scheduleTask(server, () -> {
-                playParticlesAndSoundAtLocation(world, newX, newY, newZ);
-            }, 5); // 5 tick delay
-        });
+        server.execute(() -> scheduleTask(server, () -> playParticlesAndSoundAtLocation(world, newX, newY, newZ), 5));
     }
 
-    /** Schedule a task to run after a specified number of ticks */
     private void scheduleTask(MinecraftServer server, Runnable task, int delayTicks) {
         new Thread(() -> {
             try {
-                Thread.sleep(delayTicks * 50); // 50ms per tick
+                Thread.sleep(delayTicks * 50L);
                 server.execute(task);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -188,22 +167,16 @@ public class PlayerSwap extends Wildcard {
         }).start();
     }
 
-    /** Unified method to play particles and sound at any location */
     private void playParticlesAndSoundAtLocation(ServerWorld world, double x, double y, double z) {
         try {
-            // Spawn particles
             world.spawnParticles(ParticleTypes.PORTAL, x, y + 1, z, 30, 0.5, 1, 0.5, 0.1);
-            
-            // Play sound that can be heard by nearby players
             world.playSound(null, x, y, z, SoundEvents.ENTITY_ENDERMAN_TELEPORT, SoundCategory.PLAYERS, 1.0F, 1.0F);
-        } catch (Exception e) {
-            // Fail silently if world is unloaded or there's any other issue
-        }
+        } catch (Exception ignored) {}
     }
 
     private MobEntity getNearestMob(ServerPlayerEntity player, double radius) {
-        List<MobEntity> mobs = player.getWorld().getEntitiesByClass(
-                MobEntity.class, player.getBoundingBox().expand(radius), mob -> true);
+        List<MobEntity> mobs = player.getWorld().getEntitiesByClass(MobEntity.class,
+                player.getBoundingBox().expand(radius), mob -> true);
         if (mobs.isEmpty()) return null;
         return mobs.get(random.nextInt(mobs.size()));
     }
@@ -212,7 +185,6 @@ public class PlayerSwap extends Wildcard {
         if (player == null || player.isSpectator()) return;
 
         int duration = 5 * TICKS_PER_SECOND;
-
         StatusEffectInstance[] effects = new StatusEffectInstance[]{
                 new StatusEffectInstance(StatusEffects.NAUSEA, duration, 0, false, false, false),
                 new StatusEffectInstance(StatusEffects.SLOWNESS, duration, 1, false, false, false),
@@ -233,9 +205,9 @@ public class PlayerSwap extends Wildcard {
 
     @Override
     public void deactivate() {
-        this.active = false;
-        this.tickCounter = 0;
-        this.nextSwapTick = -1;
+        super.deactivate();
+        tickCounter = 0;
+        nextSwapTick = INITIAL_DELAY;
     }
 
     /** Command registration */
