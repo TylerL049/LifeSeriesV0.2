@@ -92,8 +92,8 @@ public class FloorLava extends Wildcard {
     }
 
     private void checkPlayerPosition(ServerPlayerEntity player) {
-        BlockPos blockStandingOn = player.getBlockPos().down(); // block player is standing on
-        BlockPos blockAboveStandingOn = blockStandingOn.up();   // block above it, e.g. carpet or snow
+        BlockPos blockStandingOn = player.getBlockPos().down();
+        BlockPos blockAboveStandingOn = blockStandingOn.up();
 
         Block blockAtFeet = player.getWorld().getBlockState(blockStandingOn).getBlock();
         Block blockAboveFeet = player.getWorld().getBlockState(blockAboveStandingOn).getBlock();
@@ -115,10 +115,9 @@ public class FloorLava extends Wildcard {
             if (tickCounter - lastTick < EFFECT_COOLDOWN_TICKS) return;
         }
 
-        // Calculate wither amplifier based on elapsed time since activation
         int elapsedSeconds = tickCounter / TICKS_PER_SECOND;
-        int rampStart = 10 * 60; // 10 minutes in seconds
-        int rampEnd = 20 * 60;   // 20 minutes in seconds
+        int rampStart = 10 * 60;
+        int rampEnd = 20 * 60;
         int amplifier = 0;
 
         if (elapsedSeconds >= rampStart) {
@@ -128,7 +127,7 @@ public class FloorLava extends Wildcard {
 
         StatusEffectInstance witherEffect = new StatusEffectInstance(
                 StatusEffects.WITHER,
-                25, // ticks duration
+                25,
                 amplifier,
                 false,
                 true,
@@ -139,12 +138,10 @@ public class FloorLava extends Wildcard {
             lastEffectTick.put(playerId, tickCounter);
         }
 
-        // ?? Show flames visually, no fire damage
         showBurningVisual(player);
     }
 
     private void showBurningVisual(ServerPlayerEntity player) {
-        // Send client-only packet to show fire animation without damage
         player.networkHandler.sendPacket(new EntityStatusS2CPacket(player, (byte) 0x01));
     }
 
