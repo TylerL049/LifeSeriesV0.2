@@ -23,7 +23,7 @@ import java.util.UUID;
 
 public class FloorLava extends Wildcard {
     private static final int TICKS_PER_SECOND = 20;
-    private static final int EFFECT_CHECK_INTERVAL = 20;
+    private static final int EFFECT_CHECK_INTERVAL = 5;
     private int tickCounter = 0;
 
     private final Map<UUID, Integer> lastEffectTick = new HashMap<>();
