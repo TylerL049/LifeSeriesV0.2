@@ -118,26 +118,25 @@ public class FloorLava extends Wildcard {
         int elapsedSeconds = tickCounter / TICKS_PER_SECOND;
         int rampStart = 10 * 60;
         int rampEnd = 20 * 60;
-        int amplifier = 0;
 
+        int amplifier = 1;
         if (elapsedSeconds >= rampStart) {
             int rampProgress = Math.min(elapsedSeconds - rampStart, rampEnd - rampStart);
-            amplifier = (int) ((rampProgress / (double)(rampEnd - rampStart)) * 39);
+            amplifier = 1 + (int) ((rampProgress / (double)(rampEnd - rampStart)) * (35 - 1));
         }
+        amplifier = Math.min(amplifier, 35);
 
         StatusEffectInstance witherEffect = new StatusEffectInstance(
                 StatusEffects.WITHER,
                 25,
-                amplifier,
+                amplifier - 1,
                 false,
                 true,
                 true
         );
 
-        if (player.addStatusEffect(witherEffect)) {
-            lastEffectTick.put(playerId, tickCounter);
-        }
-
+        player.addStatusEffect(witherEffect, null);
+        lastEffectTick.put(playerId, tickCounter);
         showBurningVisual(player);
     }
 
@@ -156,11 +155,12 @@ public class FloorLava extends Wildcard {
     private void playSound(ServerPlayerEntity player) {
         if (!(player.getWorld() instanceof ServerWorld serverWorld)) return;
 
-        serverWorld.playSound(null, player.getX(), player.getY(), player.getZ(),
-                SoundEvents.BLOCK_FIRE_AMBIENT, SoundCategory.PLAYERS, 0.7F,
+        serverWorld.playSound(null, player.getBlockPos(),
+                SoundEvents.BLOCK_FIRE_AMBIENT, SoundCategory.BLOCKS, 0.7F,
                 1.0F + (float)(Math.random() * 0.4 - 0.2));
 
-        serverWorld.playSound(null, player.getX(), player.getY(), player.getZ(),
-                SoundEvents.BLOCK_LAVA_EXTINGUISH, SoundCategory.PLAYERS, 0.3F, 1.5F);
+        serverWorld.playSound(null, player.getBlockPos(),
+                SoundEvents.BLOCK_LAVA_AMBIENT, SoundCategory.BLOCKS, 0.2F,
+                1.0F);
     }
 }
