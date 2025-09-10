@@ -27,7 +27,9 @@ public class FloorLava extends Wildcard {
     private int tickCounter = 0;
 
     private final Map<UUID, Integer> lastEffectTick = new HashMap<>();
+    private final Map<UUID, Integer> lastVisualTick = new HashMap<>();
     private static final int EFFECT_COOLDOWN_TICKS = 4;
+    private static final int VISUAL_COOLDOWN_TICKS = 20;
 
     private static final Set<Block> DAMAGING_BLOCKS = Set.of(
             Blocks.GRASS_BLOCK,
@@ -66,6 +68,7 @@ public class FloorLava extends Wildcard {
         super.activate();
         tickCounter = 0;
         lastEffectTick.clear();
+        lastVisualTick.clear();
     }
 
     @Override
@@ -73,6 +76,7 @@ public class FloorLava extends Wildcard {
         super.deactivate();
         tickCounter = 0;
         lastEffectTick.clear();
+        lastVisualTick.clear();
     }
 
     @Override
@@ -102,8 +106,14 @@ public class FloorLava extends Wildcard {
 
         if (damaging) {
             applyWitherEffect(player);
-            spawnParticles(player);
-            playSound(player);
+
+            UUID playerId = player.getUuid();
+            int lastVisual = lastVisualTick.getOrDefault(playerId, 0);
+            if (tickCounter - lastVisual >= VISUAL_COOLDOWN_TICKS) {
+                spawnParticles(player);
+                playSound(player);
+                lastVisualTick.put(playerId, tickCounter);
+            }
         }
     }
 
