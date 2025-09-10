@@ -128,7 +128,7 @@ public class FloorLava extends Wildcard {
 
         StatusEffectInstance witherEffect = new StatusEffectInstance(
                 StatusEffects.WITHER,
-                25,
+                30,
                 amplifier - 1,
                 false,
                 true,
